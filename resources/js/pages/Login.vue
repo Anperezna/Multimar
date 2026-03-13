@@ -2,14 +2,13 @@
     <div id="container">
         <h1>Login</h1>
         <Input placeholder="Email" />
-        <Botones/>
+        <Botones />
     </div>
 </template>
 
-<script setup>
-import Input from '@/components/Input.vue';
+<script setup lang="ts">
 import Botones from '@/components/Botones.vue';
-
+import Input from '@/components/Input.vue';
 </script>
 
 <style scoped>

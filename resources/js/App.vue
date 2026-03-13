@@ -1,13 +1,13 @@
 <template>
-  <router-view />
+    <router-view />
 </template>
 
-<script setup>
+<script setup lang="ts">
 // No logic needed, router-view muestra las rutas
 </script>
 
 <style>
 body {
-  font-family: sans-serif;
+    font-family: sans-serif;
 }
 </style>

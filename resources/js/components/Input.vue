@@ -7,38 +7,36 @@
         :name="name"
         :id="id"
         :class="inputClass"
-    >
+    />
 </template>
 
-<script setup>
+<script setup lang="ts">
 defineProps({
     modelValue: {
         type: [String, Number],
-        default: ''
+        default: '',
     },
     type: {
         type: String,
-        default: 'text'
+        default: 'text',
     },
     placeholder: {
         type: String,
-        default: ''
+        default: '',
     },
     name: {
         type: String,
-        default: ''
+        default: '',
     },
     id: {
         type: String,
-        default: ''
+        default: '',
     },
     inputClass: {
         type: String,
-        default: ''
-    }
+        default: '',
+    },
 });
 </script>
 
-<style lang="scss" scoped>
-
-</style>
+<style lang="scss" scoped></style>
