@@ -1,4 +1,5 @@
 <template>
+    <Navbar/>
     <section class="dashboard">
         <header class="dashboard__header">
             <h1>Dashboard General</h1>
@@ -118,6 +119,7 @@
 
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
+import Navbar from './Navbar.vue';
 
 type StatusTone = 'info' | 'success' | 'warning' | 'danger' | 'violet';
 
@@ -334,7 +336,8 @@ watch(search, () => {
 
     min-height: 100vh;
     padding: 30px;
-    background: radial-gradient(circle at top right, #e1ecfa, var(--bg-page) 38%);
+    margin-left: 50px;
+    margin-right: 50px;
     color: var(--text-main);
 }
 
