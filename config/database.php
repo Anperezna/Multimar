@@ -112,6 +112,9 @@ return [
             'prefix_indexes' => true,
             'encrypt' => env('DB_ENCRYPT', true) ? 'yes' : 'no',
             'trust_server_certificate' => env('DB_TRUST_SERVER_CERTIFICATE', false) ? 'yes' : 'no',
+            'options' => [
+                'TrustServerCertificate' => true,
+            ],
         ],
 
     ],
