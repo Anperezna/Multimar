@@ -3,6 +3,10 @@ import { createRouter, createWebHistory } from 'vue-router';
 import Login from '../pages/Login.vue';
 import Welcome from '../pages/Welcome.vue';
 import Home from '@/pages/Home.vue';
+import Clientes from '@/pages/Clientes.vue';
+import EditarPerfil from '@/pages/EditarPerfil.vue';
+import EditarContrasena from '@/pages/EditarContrasena.vue';
+import Accesibilidad from '@/pages/Accesibilidad.vue';
 
 const routes = [
     {
@@ -16,6 +20,22 @@ const routes = [
     {
         path: '/home',
         component: Home
+    },
+    {
+        path: '/clientes',
+        component: Clientes
+    },
+    {
+        path: '/ajustes',
+        component: EditarPerfil
+    },
+    {
+        path: '/ajustes/contrasena',
+        component: EditarContrasena
+    },
+    {
+        path: '/ajustes/accesibilidad',
+        component: Accesibilidad
     }
 ];
 
