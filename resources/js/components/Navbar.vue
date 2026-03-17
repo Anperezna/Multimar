@@ -60,7 +60,7 @@ const paginasPorRol = {
         { id: 5, pagina: 'Solicitud Oferta', route: '/solicitudOferta', icon: solicitudOfertaIcon }
     ],
     operador: [
-        { id: 6, pagina: 'Cliente', route: '/cliente', icon: usersIcon },
+        { id: 6, pagina: 'Clientes', route: '/clientes', icon: usersIcon },
         { id: 7, pagina: 'Ofertas', route: '/ofertas', icon: ofertaIcon}
     ]
 };
