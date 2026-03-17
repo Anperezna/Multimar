@@ -47,7 +47,7 @@ const passwordForm = reactive({
 });
 </script>
 
-<style scoped>
+<style>
 .panel-body h2 {
     margin: 0;
     color: #1d2d46;
@@ -76,7 +76,7 @@ const passwordForm = reactive({
     font-weight: 600;
 }
 
-:deep(.settings-input) {
+.settings-input {
     width: 100%;
     border: 1px solid #cfdbe8;
     border-radius: 8px;
@@ -86,7 +86,7 @@ const passwordForm = reactive({
     background: #ffffff;
 }
 
-:deep(.settings-input:focus) {
+.settings-input:focus {
     outline: none;
     border-color: #97bfdc;
 }
@@ -96,7 +96,7 @@ const passwordForm = reactive({
     justify-content: flex-start;
 }
 
-:deep(.btn-login) {
+.btn-login {
     min-width: 190px;
     height: 42px;
     border-radius: 8px;

@@ -102,7 +102,7 @@ const profile = reactive({
 });
 </script>
 
-<style scoped>
+<style>
 .panel-body h2 {
     margin: 0;
     color: #1d2d46;
@@ -161,7 +161,7 @@ const profile = reactive({
     font-weight: 600;
 }
 
-:deep(.settings-input) {
+.settings-input {
     width: 100%;
     border: 1px solid #cfdbe8;
     border-radius: 8px;
@@ -171,7 +171,7 @@ const profile = reactive({
     background: #ffffff;
 }
 
-:deep(.settings-input:focus) {
+.settings-input:focus {
     outline: none;
     border-color: #97bfdc;
 }
@@ -185,7 +185,7 @@ const profile = reactive({
     justify-content: flex-end;
 }
 
-:deep(.btn-login) {
+.btn-login {
     min-width: 170px;
     height: 42px;
     border-radius: 8px;

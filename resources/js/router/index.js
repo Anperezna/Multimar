@@ -31,18 +31,6 @@ const routes = [
     {
         path: '/ajustes/accesibilidad',
         component: Accesibilidad
-    },
-    {
-        path: '/ajustes/:legacyId',
-        redirect: '/ajustes'
-    },
-    {
-        path: '/ajustes/:legacyId/contrasena',
-        redirect: '/ajustes/contrasena'
-    },
-    {
-        path: '/ajustes/:legacyId/accesibilidad',
-        redirect: '/ajustes/accesibilidad'
     }
 ];
 
