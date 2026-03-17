@@ -7,6 +7,9 @@ import Clientes from '@/pages/Clientes.vue';
 import EditarPerfil from '@/pages/EditarPerfil.vue';
 import EditarContrasena from '@/pages/EditarContrasena.vue';
 import Accesibilidad from '@/pages/Accesibilidad.vue';
+import Incoterm from '@/pages/Incoterm.vue';
+import SolicitudOferta from '@/pages/SolicitudOferta.vue';
+
 
 const routes = [
     {
@@ -36,6 +39,14 @@ const routes = [
     {
         path: '/ajustes/accesibilidad',
         component: Accesibilidad
+    },
+    {
+        path: '/incoterm',
+        component: Incoterm
+    },
+    {
+        path: '/solicitudOferta',
+        component: SolicitudOferta
     }
 ];
 
