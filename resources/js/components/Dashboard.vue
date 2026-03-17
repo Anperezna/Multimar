@@ -76,6 +76,7 @@
                                     type="button"
                                     class="detail-btn"
                                     aria-label="Ver detalles del envio"
+                                    @click="router.push({ name: 'detalle-envio', params: { id: shipment.id } })"
                                 >
                                     Ver
                                 </button>
@@ -119,6 +120,7 @@
 
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
+import { useRouter } from 'vue-router';
 import Navbar from './Navbar.vue';
 
 type StatusTone = 'info' | 'success' | 'warning' | 'danger' | 'violet';
@@ -146,6 +148,7 @@ interface SummaryCard {
 const search = ref('');
 const currentPage = ref(1);
 const pageSize = 8;
+const router = useRouter();
 
 // Reemplaza este ref por datos traidos de API cuando conectes backend.
 const shipments = ref<ShipmentRow[]>([
