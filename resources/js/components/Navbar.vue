@@ -3,7 +3,7 @@
         <div class="navbar__logo"><img :src="logo" alt="Logo" class="logo"></div>
         <div class="navbar__nav">
             <router-link
-                v-for="item in adminPages"
+                v-for="item in paginasSinAjustes"
                 :key="item.id"
                 :to="item.route"
                 class="navbar__item"
@@ -19,9 +19,14 @@
                 </button>
             </router-link>
         </div>
-        <router-link :to="`/ajustes/${userId}`">
-            <button class="navbar__settings">Ajustes</button>
-        </router-link>
+        <div class="navbar__settings-wrapper">
+            <router-link
+                v-if="ajustesPagina"
+                :to="ajustesPagina.route"
+            >
+                <button class="navbar__settings">Ajustes</button>
+            </router-link>
+        </div>
     </nav>
 </template>
 
@@ -29,34 +34,45 @@
 import { computed, ref } from 'vue';
 import logo from '../../../prueba.png';
 
-const fallbackPages = [
+// Rutas comunes para todos los roles
+const paginasEnComun = [
     { id: 1, pagina: 'Dashboard', route: '/home' },
-    { id: 2, pagina: 'Clientes', route: '/clientes' },
-    { id: 3, pagina: 'Envios', route: '/envios' },
+    { id: 2, pagina: 'Ajustes', route: '/ajustes' },
+    { id: 3, pagina: 'Notificaciones', route: '/notificaciones' }
 ];
 
-const opciones = ref([{
-    admin: {
-        id: 1,
-        nombre: [
-            { id: 1, pagina: "Dashboard", route: "/home" },
-            { id: 2, pagina: "Clientes", route: "/clientes" }
-        ]
-    },
-    operador: {
-        id: 1,
-        nombre: [
-            { id: 1, pagina: "Dashboard", route: "/home" },
-            { id: 2, pagina: "Clientes", route: "/clientes" }
-        ]
-    },
-    usuario: {
+// Rutas específicas por rol
+const paginasPorRol = {
+    admin: [
+        { id: 4, pagina: 'Clientes', route: '/clientes' }
+    ],
+    usuario: [
+        { id: 5, pagina: 'Solicitud Oferta', route: '/' }
+    ],
+    operador: [
+        { id: 6, pagina: 'Ofertas', route: '/ofertas' }
+    ]
+};
 
-    }
-}])
+// Función para obtener las páginas según el rol
+function obtenerPaginasPorRol(rol) {
+    return [
+        ...paginasEnComun,
+        ...(paginasPorRol[rol] || [])
+    ];
+}
 
-const adminPages = computed(() => {
-    return opciones.value[0]?.admin?.nombre ?? fallbackPages;
+const usuarioRol = ref('admin'); // Cambia dinámicamente según el usuario
+
+const paginas = computed(() => obtenerPaginasPorRol(usuarioRol.value));
+
+// Extrae la página de Ajustes para mostrarla aparte
+const ajustesPagina = computed(() => {
+    return paginas.value.find(p => p.pagina === 'Ajustes');
+});
+
+const paginasSinAjustes = computed(() => {
+    return paginas.value.filter(p => p.pagina !== 'Ajustes');
 });
 </script>
 
@@ -75,6 +91,12 @@ const adminPages = computed(() => {
 .navbar__settings {
     color: #f0f0f0;
     font-weight: 600;
+}
+
+.navbar__settings-wrapper {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
 }
 
 .navbar__settings {
