@@ -9,6 +9,7 @@ import EditarContrasena from '@/pages/EditarContrasena.vue';
 import Accesibilidad from '@/pages/Accesibilidad.vue';
 import Incoterm from '@/pages/Incoterm.vue';
 import SolicitudOferta from '@/pages/SolicitudOferta.vue';
+import DetalleEnvio from '@/pages/DetalleEnvio.vue';
 
 
 const routes = [
@@ -47,6 +48,11 @@ const routes = [
     {
         path: '/solicitudOferta',
         component: SolicitudOferta
+    },
+    {
+        path: '/envios/:id',
+        name: 'detalle-envio',
+        component: DetalleEnvio
     }
 ];
 
