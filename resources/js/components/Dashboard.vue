@@ -119,208 +119,228 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue';
-import { useRouter } from 'vue-router';
+import { onMounted, ref, watch } from 'vue';
+// import { useRouter } from 'vue-router';
 import Navbar from './Navbar.vue';
+import api from '../lib/api';
 
-type StatusTone = 'info' | 'success' | 'warning' | 'danger' | 'violet';
+// type StatusTone = 'info' | 'success' | 'warning' | 'danger' | 'violet';
 
-interface ShipmentRow {
-    id: number;
-    code: string;
-    description: string;
-    operation: 'Importacion' | 'Exportacion';
-    status: string;
-    statusTone: StatusTone;
-    carrier: string;
-    lastUpdate: string;
-}
+// interface ShipmentRow {
+//     id: number;
+//     code: string;
+//     description: string;
+//     operation: 'Importacion' | 'Exportacion';
+//     status: string;
+//     statusTone: StatusTone;
+//     carrier: string;
+//     lastUpdate: string;
+// }
 
-interface SummaryCard {
-    id: string;
-    label: string;
-    value: string;
-    change: string;
-    tone: Exclude<StatusTone, 'violet'>;
-    icon: string;
-}
+// interface SummaryCard {
+//     id: string;
+//     label: string;
+//     value: string;
+//     change: string;
+//     tone: Exclude<StatusTone, 'violet'>;
+//     icon: string;
+// }
 
-const search = ref('');
-const currentPage = ref(1);
-const pageSize = 8;
-const router = useRouter();
+// const search = ref('');
+// const currentPage = ref(1);
+// const pageSize = 8;
+// const router = useRouter();
+const ofertas = ref([]);
+const apiError = ref('');
 
-// Reemplaza este ref por datos traidos de API cuando conectes backend.
-const shipments = ref<ShipmentRow[]>([
-    {
-        id: 1,
-        code: 'EXP-2024-001',
-        description: 'Electronica',
-        operation: 'Exportacion',
-        status: 'En Transito',
-        statusTone: 'info',
-        carrier: 'SEUR',
-        lastUpdate: 'Salida de almacen Madrid',
-    },
-    {
-        id: 2,
-        code: 'IMP-2024-042',
-        description: 'Textiles',
-        operation: 'Importacion',
-        status: 'Completado',
-        statusTone: 'success',
-        carrier: 'UPS',
-        lastUpdate: 'Entregado en destino',
-    },
-    {
-        id: 3,
-        code: 'EXP-2024-003',
-        description: 'Alimentacion',
-        operation: 'Exportacion',
-        status: 'En Aduana',
-        statusTone: 'violet',
-        carrier: 'DHL',
-        lastUpdate: 'Revision aduanera en curso',
-    },
-    {
-        id: 4,
-        code: 'IMP-2024-015',
-        description: 'Maquinaria',
-        operation: 'Importacion',
-        status: 'Pendiente',
-        statusTone: 'warning',
-        carrier: 'FedEx',
-        lastUpdate: 'Esperando documentacion',
-    },
-    {
-        id: 5,
-        code: 'EXP-2024-007',
-        description: 'Automocion',
-        operation: 'Exportacion',
-        status: 'En Transito',
-        statusTone: 'info',
-        carrier: 'Maersk',
-        lastUpdate: 'En puerto de Barcelona',
-    },
-    {
-        id: 6,
-        code: 'IMP-2024-023',
-        description: 'Quimicos',
-        operation: 'Importacion',
-        status: 'Completado',
-        statusTone: 'success',
-        carrier: 'SEUR',
-        lastUpdate: 'Entregado y verificado',
-    },
-    {
-        id: 7,
-        code: 'EXP-2024-011',
-        description: 'Farmaceutica',
-        operation: 'Exportacion',
-        status: 'Cancelado',
-        statusTone: 'danger',
-        carrier: 'UPS',
-        lastUpdate: 'Cancelado por cliente',
-    },
-    {
-        id: 8,
-        code: 'IMP-2024-031',
-        description: 'Electronica',
-        operation: 'Importacion',
-        status: 'En Transito',
-        statusTone: 'info',
-        carrier: 'DHL',
-        lastUpdate: 'En transito desde Shenzhen',
-    },
-    {
-        id: 9,
-        code: 'EXP-2024-061',
-        description: 'Madera',
-        operation: 'Exportacion',
-        status: 'Pendiente',
-        statusTone: 'warning',
-        carrier: 'MSC',
-        lastUpdate: 'Pendiente de despacho',
-    },
-]);
+// // Reemplaza este ref por datos traidos de API cuando conectes backend.
+// const shipments = ref<ShipmentRow[]>([
+//     {
+//         id: 1,
+//         code: 'EXP-2024-001',
+//         description: 'Electronica',
+//         operation: 'Exportacion',
+//         status: 'En Transito',
+//         statusTone: 'info',
+//         carrier: 'SEUR',
+//         lastUpdate: 'Salida de almacen Madrid',
+//     },
+//     {
+//         id: 2,
+//         code: 'IMP-2024-042',
+//         description: 'Textiles',
+//         operation: 'Importacion',
+//         status: 'Completado',
+//         statusTone: 'success',
+//         carrier: 'UPS',
+//         lastUpdate: 'Entregado en destino',
+//     },
+//     {
+//         id: 3,
+//         code: 'EXP-2024-003',
+//         description: 'Alimentacion',
+//         operation: 'Exportacion',
+//         status: 'En Aduana',
+//         statusTone: 'violet',
+//         carrier: 'DHL',
+//         lastUpdate: 'Revision aduanera en curso',
+//     },
+//     {
+//         id: 4,
+//         code: 'IMP-2024-015',
+//         description: 'Maquinaria',
+//         operation: 'Importacion',
+//         status: 'Pendiente',
+//         statusTone: 'warning',
+//         carrier: 'FedEx',
+//         lastUpdate: 'Esperando documentacion',
+//     },
+//     {
+//         id: 5,
+//         code: 'EXP-2024-007',
+//         description: 'Automocion',
+//         operation: 'Exportacion',
+//         status: 'En Transito',
+//         statusTone: 'info',
+//         carrier: 'Maersk',
+//         lastUpdate: 'En puerto de Barcelona',
+//     },
+//     {
+//         id: 6,
+//         code: 'IMP-2024-023',
+//         description: 'Quimicos',
+//         operation: 'Importacion',
+//         status: 'Completado',
+//         statusTone: 'success',
+//         carrier: 'SEUR',
+//         lastUpdate: 'Entregado y verificado',
+//     },
+//     {
+//         id: 7,
+//         code: 'EXP-2024-011',
+//         description: 'Farmaceutica',
+//         operation: 'Exportacion',
+//         status: 'Cancelado',
+//         statusTone: 'danger',
+//         carrier: 'UPS',
+//         lastUpdate: 'Cancelado por cliente',
+//     },
+//     {
+//         id: 8,
+//         code: 'IMP-2024-031',
+//         description: 'Electronica',
+//         operation: 'Importacion',
+//         status: 'En Transito',
+//         statusTone: 'info',
+//         carrier: 'DHL',
+//         lastUpdate: 'En transito desde Shenzhen',
+//     },
+//     {
+//         id: 9,
+//         code: 'EXP-2024-061',
+//         description: 'Madera',
+//         operation: 'Exportacion',
+//         status: 'Pendiente',
+//         statusTone: 'warning',
+//         carrier: 'MSC',
+//         lastUpdate: 'Pendiente de despacho',
+//     },
+// ]);
 
-const filteredShipments = computed(() => {
-    const term = search.value.trim().toLowerCase();
+// const filteredShipments = computed(() => {
+//     const term = search.value.trim().toLowerCase();
 
-    if (!term) {
-        return shipments.value;
+//     if (!term) {
+//         return shipments.value;
+//     }
+
+//     return shipments.value.filter((item) => {
+//         return (
+//             item.code.toLowerCase().includes(term) ||
+//             item.description.toLowerCase().includes(term) ||
+//             item.carrier.toLowerCase().includes(term) ||
+//             item.status.toLowerCase().includes(term)
+//         );
+//     });
+// });
+
+// const totalPages = computed(() => {
+//     return Math.max(1, Math.ceil(filteredShipments.value.length / pageSize));
+// });
+
+// const paginatedShipments = computed(() => {
+//     const start = (currentPage.value - 1) * pageSize;
+//     return filteredShipments.value.slice(start, start + pageSize);
+// });
+
+// const summaryCards = computed<SummaryCard[]>(() => {
+//     const total = shipments.value.length;
+//     const inTransit = shipments.value.filter((item) => item.status === 'En Transito').length;
+//     const completed = shipments.value.filter((item) => item.status === 'Completado').length;
+//     const pending = shipments.value.filter((item) => item.status === 'Pendiente').length;
+
+//     return [
+//         {
+//             id: 'total',
+//             label: 'Total Envios',
+//             value: total.toLocaleString('es-ES'),
+//             change: '+12%',
+//             tone: 'info',
+//             icon: '[]',
+//         },
+//         {
+//             id: 'transit',
+//             label: 'En Transito',
+//             value: inTransit.toLocaleString('es-ES'),
+//             change: '+5%',
+//             tone: 'success',
+//             icon: '=>',
+//         },
+//         {
+//             id: 'completed',
+//             label: 'Completados',
+//             value: completed.toLocaleString('es-ES'),
+//             change: '+18%',
+//             tone: 'success',
+//             icon: 'OK',
+//         },
+//         {
+//             id: 'pending',
+//             label: 'Pendientes',
+//             value: pending.toLocaleString('es-ES'),
+//             change: '-2%',
+//             tone: 'danger',
+//             icon: 'O',
+//         },
+//     ];
+// });
+
+const fetchBackendData = async () => {
+    apiError.value = '';
+
+    try {
+        
+        const ofertasResponse = await api.get('/ofertes');
+        ofertas.value = ofertasResponse.data;
+        // Demo: comprobacion en consola de que Axios conecta con backend.
+        console.log('Ofertas:', ofertasResponse.data);
+    } catch (error) {
+        apiError.value = 'No se pudieron cargar usuarios/incoterms desde backend.';
+        console.error('Error Axios:', error);
     }
+};
 
-    return shipments.value.filter((item) => {
-        return (
-            item.code.toLowerCase().includes(term) ||
-            item.description.toLowerCase().includes(term) ||
-            item.carrier.toLowerCase().includes(term) ||
-            item.status.toLowerCase().includes(term)
-        );
-    });
-});
+onMounted(fetchBackendData);
 
-const totalPages = computed(() => {
-    return Math.max(1, Math.ceil(filteredShipments.value.length / pageSize));
-});
+// watch(filteredShipments, () => {
+//     if (currentPage.value > totalPages.value) {
+//         currentPage.value = totalPages.value;
+//     }
+// });
 
-const paginatedShipments = computed(() => {
-    const start = (currentPage.value - 1) * pageSize;
-    return filteredShipments.value.slice(start, start + pageSize);
-});
-
-const summaryCards = computed<SummaryCard[]>(() => {
-    const total = shipments.value.length;
-    const inTransit = shipments.value.filter((item) => item.status === 'En Transito').length;
-    const completed = shipments.value.filter((item) => item.status === 'Completado').length;
-    const pending = shipments.value.filter((item) => item.status === 'Pendiente').length;
-
-    return [
-        {
-            id: 'total',
-            label: 'Total Envios',
-            value: total.toLocaleString('es-ES'),
-            change: '+12%',
-            tone: 'info',
-            icon: '[]',
-        },
-        {
-            id: 'transit',
-            label: 'En Transito',
-            value: inTransit.toLocaleString('es-ES'),
-            change: '+5%',
-            tone: 'success',
-            icon: '=>',
-        },
-        {
-            id: 'completed',
-            label: 'Completados',
-            value: completed.toLocaleString('es-ES'),
-            change: '+18%',
-            tone: 'success',
-            icon: 'OK',
-        },
-        {
-            id: 'pending',
-            label: 'Pendientes',
-            value: pending.toLocaleString('es-ES'),
-            change: '-2%',
-            tone: 'danger',
-            icon: 'O',
-        },
-    ];
-});
-
-watch(filteredShipments, () => {
-    if (currentPage.value > totalPages.value) {
-        currentPage.value = totalPages.value;
-    }
-});
-
-watch(search, () => {
-    currentPage.value = 1;
-});
+// watch(search, () => {
+//     currentPage.value = 1;
+// });
 </script>
 
 <style lang="scss" scoped>
