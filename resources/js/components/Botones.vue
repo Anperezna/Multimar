@@ -19,7 +19,7 @@ defineEmits(['click']);
 .btn-login {
     padding: 0.5rem 1.25rem;
     border: none;
-    border-radius: 6px;
+    border-radius: 6px; 
     font-size: 1rem;
     cursor: pointer;
     background-color: #0ea5e9;

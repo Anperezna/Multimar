@@ -15,6 +15,12 @@
                     <div class="listado-top">
                         <h2>Listado de Usuarios</h2>
                         <Botones @click="mostrarFormulario = true">
+                            <img
+                                src="/icons_multimar/icons-simex/daw/crearuser.svg"
+                                alt=""
+                                aria-hidden="true"
+                                class="crear-icon"
+                            />
                             Nuevo Usuario
                         </Botones>
                     </div>
@@ -36,6 +42,12 @@
                                 <td>{{ u.pais }}</td>
                                 <td>
                                     <span class="rol-badge" :class="`rol-${u.rol}`">
+                                        <img
+                                            src="/icons_multimar/icons-simex/daw/escudo.svg"
+                                            alt=""
+                                            aria-hidden="true"
+                                            class="rol-icon"
+                                        />
                                         {{ u.rol.charAt(0).toUpperCase() + u.rol.slice(1) }}
                                     </span>
                                 </td>
@@ -143,11 +155,10 @@ const form = reactive({
     pais: '',
     correo: '',
     password: '',
-    // Operador siempre crea clientes; admin puede elegir antes de enviar
     rol: usuarioRol.value === 'admin' ? 'cliente' : 'cliente',
 });
 
-// TODO: Reemplazar por usuarios reales llamando a la API.
+// TODO: Reemplazar por usuarios reales llamando a la API y no acabar muertos.
 const usuarios = ref([
     { id: 1, nombre: 'Admin',    apellidos: 'User',         correo: 'admin@simex.com',    pais: 'Espana',  rol: 'admin' },
     { id: 2, nombre: 'Operador', apellidos: 'Logistico',    correo: 'operador@simex.com', pais: 'Espana',  rol: 'operador' },
@@ -257,11 +268,32 @@ function cancelar() {
 .rol-badge {
     display: inline-flex;
     align-items: center;
-    gap: 4px;
+    justify-content: center;
+    gap: 6px;
     padding: 4px 10px;
     border-radius: 999px;
     font-size: 0.78rem;
+    line-height: 1;
     font-weight: 600;
+}
+
+.rol-icon {
+    width: 12px;
+    height: 12px;
+    display: block;
+    object-fit: contain;
+}
+
+.rol-admin .rol-icon {
+    filter: invert(17%) sepia(95%) saturate(2727%) hue-rotate(345deg) brightness(88%) contrast(91%);
+}
+
+.rol-operador .rol-icon {
+    filter: invert(30%) sepia(96%) saturate(1246%) hue-rotate(212deg) brightness(90%) contrast(92%);
+}
+
+.rol-cliente .rol-icon {
+    filter: invert(26%) sepia(43%) saturate(1648%) hue-rotate(131deg) brightness(89%) contrast(95%);
 }
 
 .rol-admin    { background: #fee2e2; color: #b91c1c; }
@@ -362,6 +394,17 @@ function cancelar() {
 
 .btn-cancelar:hover {
     background: #f3f6fa;
+}
+
+.crear-icon {
+    width: 14px;
+    height: 14px;
+    display: inline-block;
+    object-fit: contain;
+    margin-right: 6px;
+    position: relative;
+    top: 1px;
+    filter: brightness(0) invert(1);
 }
 
 .crear-actions :deep(.btn-login) {
