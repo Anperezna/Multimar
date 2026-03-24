@@ -12,7 +12,7 @@ class OfertaController extends Controller
      */
     public function index()
     {
-        //
+        return Oferta::all();
     }
 
     /**

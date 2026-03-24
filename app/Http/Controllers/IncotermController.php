@@ -12,7 +12,7 @@ class IncotermController extends Controller
      */
     public function index()
     {
-        //
+        return Incoterm::all();
     }
 
     /**
