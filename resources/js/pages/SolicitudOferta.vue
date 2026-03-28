@@ -136,6 +136,7 @@
 
 <script setup>
 import { ref } from 'vue';
+import axios from 'axios';
 import Desplegable from '@/components/Desplegable.vue';
 import Input from '@/components/Input.vue';
 import Navbar from '@/components/Navbar.vue';
@@ -175,11 +176,18 @@ const tiposMercancia = ref([
     { value: 'otros', label: 'Otros' },
 ]);
 
-const tiposContenedor = ref([
-    { value: '20ft', label: 'Contenedor 20 pies' },
-    { value: '40ft', label: 'Contenedor 40 pies' },
-    { value: 'hc', label: 'Contenedor HC (High Cube)' },
-]);
+const tiposMercanciaData = await axios.get('/api/tipos-mercancia');
+const tiposMercancia = ref(tiposMercanciaData.data.map(item => ({
+  value: item.id,
+  label: item.tipus
+})));   
+
+// Forma más limpia y funcional
+const tiposContenedorData = await axios.get('/api/tipos-contenedor');
+const tiposContenedor = ref(tiposContenedorData.data.map(item => ({
+  value: item.id,
+  label: item.tipus
+})));   
 
 const incotermOptions = ref([
     { value: 'exw', label: 'EXW - Ex Works' },

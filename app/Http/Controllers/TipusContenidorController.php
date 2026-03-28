@@ -12,7 +12,8 @@ class TipusContenidorController extends Controller
      */
     public function index()
     {
-        //
+        $tipusContenidors = TipusContenidor::all();
+        return response()->json($tipusContenidors);
     }
 
     /**
