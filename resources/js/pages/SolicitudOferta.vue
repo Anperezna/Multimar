@@ -5,10 +5,11 @@
             <div class="solicitud-header__content">
                 <h1 class="solicitud-header__title">Crear Solicitud de Oferta</h1>
                 <p class="solicitud-header__subtitle">Complete los detalles para solicitar una nueva cotización de transporte.</p>
+                <p v-if="statusMessage" class="solicitud-header__subtitle">{{ statusMessage }}</p>
             </div>
-            <button class="solicitud-header__button">
+            <button class="solicitud-header__button" type="button" :disabled="isSubmitting" @click="crearSolicitud">
                 <img :src="avionIcon" alt="avión">
-                Crear Solicitud
+                {{ isSubmitting ? 'Creando...' : 'Crear Solicitud' }}
             </button>
         </div>
 
@@ -34,7 +35,7 @@
                             <label class="form-label">Tipo de mercancía</label>
                             <Desplegable
                                 v-model="formData.tipoMercancia"
-                                :options="tiposMercancia"
+                                :options="tiposCarga"
                                 placeholder="Seleccionar tipo..."
                                 selectClass="form-select"
                             />
@@ -83,7 +84,7 @@
                         <label class="form-label">Tipo de Incoterm</label>
                         <Desplegable
                             v-model="formData.incoterm"
-                            :options="incotermOptions"
+                            :options="tiposIncoterm"
                             placeholder="Seleccionar incoterm..."
                             selectClass="form-select"
                         />
@@ -123,7 +124,7 @@
                         <label class="form-label">Representante de Venta (Operador Logístico)</label>
                         <Desplegable
                             v-model="formData.operador"
-                            :options="operadores"
+                            :options="operadoresLogisticos"
                             placeholder="Seleccionar operador..."
                             selectClass="form-select"
                         />
@@ -167,17 +168,11 @@ const formData = ref({
     operador: '',
 });
 
-// Opciones para los desplegables
-const tiposMercancia = ref([
-    { value: 'general', label: 'General' },
-    { value: 'riffer', label: 'Riffer' },
-    { value: 'liquidos', label: 'Liquidos' },
-    { value: 'immo', label: 'Immo' },
-    { value: 'otros', label: 'Otros' },
-]);
+const isSubmitting = ref(false);
+const statusMessage = ref('');
 
-const tiposMercanciaData = await axios.get('/api/tipos-mercancia');
-const tiposMercancia = ref(tiposMercanciaData.data.map(item => ({
+const tiposCargaData = await axios.get('/api/tipos-carga');
+const tiposCarga = ref(tiposCargaData.data.map(item => ({
   value: item.id,
   label: item.tipus
 })));   
@@ -187,27 +182,44 @@ const tiposContenedorData = await axios.get('/api/tipos-contenedor');
 const tiposContenedor = ref(tiposContenedorData.data.map(item => ({
   value: item.id,
   label: item.tipus
-})));   
+}))); 
 
-const incotermOptions = ref([
-    { value: 'exw', label: 'EXW - Ex Works' },
-    { value: 'fca', label: 'FCA - Free Carries' },
-    { value: 'cpt', label: 'CPT - Carriage Paid To' },
-    { value: 'cip', label: 'CIP - Carriage and Insurance Paid' },
-    { value: 'dap', label: 'DAP - Delivered at Place' },
-    { value: 'dpu', label: 'DPU - Delivered at Place Unloaded' },
-    { value: 'ddp', label: 'DDP - Delivered Duty Paid' },
-    { value: 'cfr', label: 'CFR - Cost and Freight' },
-    { value: 'fob', label: 'FOB - Free on Board' },
-    { value: 'fas', label: 'FAS - Free Alongside Ship' },
-    { value: 'cif', label: 'CIF - Cost, Insurance and Freight' },
-]);
+const tiposIncotermData = await axios.get('/api/tipos-incoterm');
+const tiposIncoterm = ref(tiposIncotermData.data.map(item => ({
+  value: item.id,
+  label: item.codi.trim() + ' ' + item.nom.trim()
+}))); 
 
-const operadores = ref([
-    { value: 'operador1', label: 'Operador Logístico A' },
-    { value: 'operador2', label: 'Operador Logístico B' },
-    { value: 'operador3', label: 'Operador Logístico C' },
-]);
+const operadoresLogisticosData = await axios.get('/api/getOperadores-logisticos');
+const operadoresLogisticos = ref(operadoresLogisticosData.data.map(item => ({
+  value: item.id,
+  label: item.nom + ' ' + item.cognoms + ' (' + item.correu + ')'
+})));
+
+const crearSolicitud = async () => {
+    isSubmitting.value = true;
+    statusMessage.value = '';
+
+    try {
+        await axios.post('/api/solicitud-oferta', {
+            nombreMercancia: formData.value.nombreMercancia,
+            tipoMercancia: formData.value.tipoMercancia,
+            tipoContenedor: formData.value.tipoContenedor,
+            pesoBruto: formData.value.pesoBruto,
+            volumen: formData.value.volumen,
+            incoterm: formData.value.incoterm,
+            origen: formData.value.origen,
+            destino: formData.value.destino,
+            operador: formData.value.operador,
+        });
+
+        statusMessage.value = 'Solicitud enviada correctamente.';
+    } catch (error) {
+        statusMessage.value = error?.response?.data?.message ?? 'No se pudo crear la solicitud.';
+    } finally {
+        isSubmitting.value = false;
+    }
+};
 </script>
 
 <style scoped>
@@ -271,6 +283,11 @@ const operadores = ref([
 
 .solicitud-header__button:hover {
     background: #0078b1;
+}
+
+.solicitud-header__button:disabled {
+    opacity: 0.65;
+    cursor: not-allowed;
 }
 
 .solicitud-header__button-icon {

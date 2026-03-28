@@ -12,7 +12,8 @@ class TipusIncotermController extends Controller
      */
     public function index()
     {
-        //
+        $tiposIncoterm = TipusIncoterm::all();
+        return response()->json($tiposIncoterm);
     }
 
     /**

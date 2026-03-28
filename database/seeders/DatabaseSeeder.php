@@ -20,13 +20,11 @@ class DatabaseSeeder extends Seeder
         $adminRol = Rol::firstOrCreate([
             'rol' => 'Admin',
         ]);
-
-        Rol::firstOrCreate([
+        $operadorRol = Rol::firstOrCreate([
             'rol' => 'Operador',
         ]);
-
-        Rol::firstOrCreate([
-            'rol' => 'Client',
+        $usuariRol = Rol::firstOrCreate([
+            'rol' => 'Usuari',
         ]);
 
         Usuari::updateOrCreate([
@@ -36,6 +34,16 @@ class DatabaseSeeder extends Seeder
             'nom' => 'Admin',
             'cognoms' => 'Admin',
             'rol_id' => $adminRol->id,
+            'dni' => '65566565B',
+        ]);
+
+        Usuari::updateOrCreate([
+            'correu' => 'operador@multimar.com',
+        ], [
+            'contrasenya' => '123123',
+            'nom' => 'Operador',
+            'cognoms' => 'Operador',
+            'rol_id' => $operadorRol->id,
             'dni' => '65566565B',
         ]);
     }

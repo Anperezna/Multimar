@@ -12,7 +12,8 @@ class TipusCarregaController extends Controller
      */
     public function index()
     {
-        //
+        $tiposCarga = TipusCarrega::all();
+        return response()->json($tiposCarga);
     }
 
     /**

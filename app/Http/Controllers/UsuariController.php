@@ -46,4 +46,10 @@ class UsuariController extends Controller
     {
         //
     }
+
+    public function getOperadoresLogisticos()
+    {
+        $operadoresLogisticos = Usuari::where('rol_id', 2)->get();
+        return response()->json($operadoresLogisticos);
+    }
 }
