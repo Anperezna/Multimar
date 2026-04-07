@@ -4,15 +4,25 @@ namespace App\Http\Controllers;
 
 use App\Models\Usuari;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
 
-class LoginController extends Controller
+class AuthentificationController extends Controller
 {
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function login(Request $request)
     {
-        //
+        $usuari = Usuari::query()->where('correu', $request->input('correu'))->first();
+
+        if($usuari && Hash::check($request->input('password'), $usuari->contrasenya)) {
+            $token = $usuari->createToken('auth_token')->plainTextToken;
+            return response()->json(['token' => $token], 200);
+        
+            } else {
+            return response()->json(['error' => 'Credenciales inválidas'], 401);
+        }
+
     }
 
     /**
