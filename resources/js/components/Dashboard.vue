@@ -77,7 +77,7 @@
                                     type="button"
                                     class="detail-btn"
                                     aria-label="Ver detalles del envio"
-                                    @click="router.push({ name: 'detalle-envio', params: { id: shipment.id } })"
+                                    @click="router.push({ name: 'detalle-oferta', params: { id: shipment.id } })"
                                 >
                                     Ver
                                 </button>
@@ -129,18 +129,12 @@ type StatusTone = 'info' | 'success' | 'warning' | 'danger';
 
 type OfertaApi = {
     id: number | string;
-    comentaris?: string | null;
-    operacio_nom?: string | null;
-    tipus_transport_nom?: string | null;
-    transportista_origen_nom?: string | null;
-    estat_oferta_nom?: string | null;
-    data_creacio?: string | null;
-    etd?: string | null;
-    eta?: string | null;
-    acceptat?: number | string | null;
-    vist?: number | string | null;
-    acabat?: number | string | null;
-    cancelat?: number | string | null;
+    code: string;
+    description: string;
+    operation: string;
+    status: string;
+    carrier: string;
+    lastUpdate?: string | null;
 };
 
 interface ShipmentRow {
@@ -170,35 +164,25 @@ const router = useRouter();
 const ofertas = ref<OfertaApi[]>([]);
 const apiError = ref('');
 
-const statusFromOferta = (oferta: OfertaApi): { label: string; tone: StatusTone } => {
-    if (Number(oferta.cancelat ?? 0) === 1) return { label: 'Cancelada', tone: 'danger' };
-    if (Number(oferta.acabat ?? 0) === 1) return { label: 'Completada', tone: 'success' };
-    if (Number(oferta.acceptat ?? 0) === 1) return { label: 'Aceptada', tone: 'info' };
-    if (Number(oferta.vist ?? 0) === 1) return { label: 'En revision', tone: 'warning' };
-    return { label: 'Pendiente', tone: 'warning' };
-};
-
-const codePrefixFromOperation = (operation?: string | null): 'IMP' | 'EXP' => {
-    const value = (operation || '').toLowerCase();
-    return value.includes('import') ? 'IMP' : 'EXP';
+const toneFromStatus = (status?: string | null): StatusTone => {
+    const value = (status || '').toLowerCase();
+    if (value.includes('complet') || value.includes('accept')) return 'success';
+    if (value.includes('cancel') || value.includes('rebuig')) return 'danger';
+    if (value.includes('pend') || value.includes('revis')) return 'warning';
+    return 'info';
 };
 
 const shipments = computed<ShipmentRow[]>(() => {
     return ofertas.value.map((oferta) => {
-        const id = Number(oferta.id);
-        const fallbackStatus = statusFromOferta(oferta);
-        const operation = oferta.operacio_nom?.trim() || '-';
-        const prefix = codePrefixFromOperation(oferta.operacio_nom);
-
         return {
-            id,
-            code: `${prefix}-${String(id).padStart(4, '0')}`,
-            description: oferta.comentaris?.trim() || '-',
-            operation,
-            status: oferta.estat_oferta_nom?.trim() || fallbackStatus.label,
-            statusTone: fallbackStatus.tone,
-            carrier: oferta.transportista_origen_nom?.trim() || '-',
-            lastUpdate: oferta.etd || oferta.eta || oferta.data_creacio || '-',
+            id: Number(oferta.id),
+            code: oferta.code,
+            description: oferta.description,
+            operation: oferta.operation,
+            status: oferta.status,
+            statusTone: toneFromStatus(oferta.status),
+            carrier: oferta.carrier,
+            lastUpdate: oferta.lastUpdate || '-',
         };
     });
 });
@@ -226,15 +210,15 @@ const paginatedShipments = computed(() => {
 
 const summaryCards = computed<SummaryCard[]>(() => {
     const total = shipments.value.length;
-    const accepted = shipments.value.filter((item) => item.status === 'Aceptada').length;
-    const completed = shipments.value.filter((item) => item.status === 'Completada').length;
-    const pending = shipments.value.filter((item) => ['Pendiente', 'En revision'].includes(item.status)).length;
+    const accepted = shipments.value.filter((item) => item.status.toLowerCase().includes('accept')).length;
+    const completed = shipments.value.filter((item) => item.status.toLowerCase().includes('complet')).length;
+    const pending = shipments.value.filter((item) => item.status.toLowerCase().includes('pend')).length;
 
     return [
         {
             id: 'total',
             label: 'Total Envios',
-            value: total.toLocaleString('es-ES'),
+            value: String(total),
             change: `${total}`,
             tone: 'info',
             icon: '[]',
@@ -242,7 +226,7 @@ const summaryCards = computed<SummaryCard[]>(() => {
         {
             id: 'transit',
             label: 'Aceptadas',
-            value: accepted.toLocaleString('es-ES'),
+            value: String(accepted),
             change: `${accepted}`,
             tone: 'info',
             icon: '=>',
@@ -250,7 +234,7 @@ const summaryCards = computed<SummaryCard[]>(() => {
         {
             id: 'completed',
             label: 'Completadas',
-            value: completed.toLocaleString('es-ES'),
+            value: String(completed),
             change: `${completed}`,
             tone: 'success',
             icon: 'OK',
@@ -258,7 +242,7 @@ const summaryCards = computed<SummaryCard[]>(() => {
         {
             id: 'pending',
             label: 'Pendientes',
-            value: pending.toLocaleString('es-ES'),
+            value: String(pending),
             change: `${pending}`,
             tone: 'warning',
             icon: 'O',
