@@ -118,7 +118,7 @@
                                 v-model="form.rol"
                                 class="cu-input cu-select"
                             >
-                                <option value="cliente">Cliente</option>
+                                <option value="usuari">Cliente</option>
                                 <option value="operador">Operador</option>
                                 <option value="admin">Admin</option>
                             </select>
@@ -128,6 +128,8 @@
                             <button type="button" class="btn-cancelar" @click="cancelar">Cancelar</button>
                             <Botones type="submit">Crear</Botones>
                         </div>
+
+                        <small v-if="errorCrear" class="field-hint">{{ errorCrear }}</small>
                     </form>
                 </aside>
 
@@ -141,12 +143,15 @@ import { ref, reactive } from 'vue';
 import Navbar from '@/components/Navbar.vue';
 import Botones from '@/components/Botones.vue';
 import Input from '@/components/Input.vue';
+import api from '@/lib/api';
 
 // TODO: Reemplazar por el estado real de autenticacion cuando se conecte la BD.
 // Debe coincidir con el valor de usuarioRol en Navbar.vue.
-const usuarioRol = ref('operador');
+const usuarioRol = ref('admin');
+const usuarioCreadorId = ref(1);
 
 const mostrarFormulario = ref(false);
+const errorCrear = ref('');
 
 const form = reactive({
     nombre: '',
@@ -155,7 +160,7 @@ const form = reactive({
     pais: '',
     correo: '',
     password: '',
-    rol: usuarioRol.value === 'admin' ? 'cliente' : 'cliente',
+    rol: usuarioRol.value === 'admin' ? 'usuari' : 'usuari',
 });
 
 // TODO: Reemplazar por usuarios reales llamando a la API y no acabar muertos.
@@ -167,22 +172,46 @@ const usuarios = ref([
     { id: 5, nombre: 'Pedro',    apellidos: 'Sanchez Ruiz', correo: 'pedro@simex.com',    pais: 'Colombia',rol: 'operador' },
 ]);
 
-function crearUsuario() {
-    const nuevoRol = usuarioRol.value === 'operador' ? 'cliente' : form.rol;
-    usuarios.value.push({
-        id: Date.now(),
-        nombre:    form.nombre,
-        apellidos: form.apellidos,
-        correo:    form.correo,
-        pais:      form.pais,
-        rol:       nuevoRol,
-    });
-    cancelar();
+async function crearUsuario() {
+    errorCrear.value = '';
+
+    const nuevoRol = usuarioRol.value === 'operador' ? 'usuari' : form.rol;
+
+    try {
+        const { data } = await api.post('/usuaris', {
+            creador_id: usuarioCreadorId.value,
+            nombre: form.nombre,
+            apellidos: form.apellidos,
+            dni: form.dni,
+            pais: form.pais,
+            correo: form.correo,
+            password: form.password,
+            rol: nuevoRol,
+        });
+
+        usuarios.value.push({
+            id: data.id,
+            nombre: data.nombre,
+            apellidos: data.apellidos,
+            correo: data.correo,
+            pais: data.pais,
+            rol: String(data.rol).toLowerCase(),
+        });
+
+        cancelar();
+    } catch (error) {
+        errorCrear.value =
+            error?.response?.data?.message ||
+            error?.response?.data?.error ||
+            Object.values(error?.response?.data?.errors || {}).flat()?.[0] ||
+            error?.message ||
+            'No se pudo crear el usuario';
+    }
 }
 
 function cancelar() {
     mostrarFormulario.value = false;
-    Object.assign(form, { nombre: '', apellidos: '', dni: '', pais: '', correo: '', password: '', rol: 'cliente' });
+    Object.assign(form, { nombre: '', apellidos: '', dni: '', pais: '', correo: '', password: '', rol: 'usuari' });
 }
 </script>
 
