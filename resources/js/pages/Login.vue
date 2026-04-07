@@ -27,21 +27,51 @@
                 />
 
                 <Botones class="login-button">Iniciar Sesion</Botones>
+                <small v-if="errorMsg" class="login-error">{{ errorMsg }}</small>
             </form>
         </div>
     </div>
 </template>
 
 <script setup lang="ts">
+import axios from 'axios';
 import { ref } from 'vue';
+import { useRouter } from 'vue-router';
 import Botones from '@/components/Botones.vue';
 import Input from '@/components/Input.vue';
+import api from '@/lib/api';
 
 const email = ref('');
 const password = ref('');
+const errorMsg = ref('');
+const router = useRouter();
 
-const submitLogin = () => {
-    // Placeholder for real auth integration.
+const submitLogin = async () => {
+    errorMsg.value = '';
+
+    try {
+        const { data } = await api.post('/login', {
+            correu: email.value,
+            password: password.value,
+        });
+
+        if (data?.token) {
+            localStorage.setItem('auth_token', data.token);
+        }
+
+        await router.push('/home');
+    } catch (error) {
+        if (axios.isAxiosError(error)) {
+            errorMsg.value =
+                error.response?.data?.error ||
+                Object.values(error.response?.data?.errors || {}).flat()?.[0] as string ||
+                'Credenciales inválidas';
+
+            return;
+        }
+
+        errorMsg.value = 'Credenciales inválidas';
+    }
 };
 </script>
 
@@ -129,5 +159,11 @@ const submitLogin = () => {
     height: 44px;
     border-radius: 8px;
     font-size: 0.98rem;
+}
+
+.login-error {
+    margin-top: 4px;
+    color: #b42318;
+    font-size: 0.84rem;
 }
 </style>

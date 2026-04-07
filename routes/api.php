@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AuthentificationController;
 use App\Http\Controllers\UsuariController;
 use App\Http\Controllers\IncotermController;
 use App\Http\Controllers\OfertaController;
@@ -15,6 +16,8 @@ use Illuminate\Support\Facades\Route;
 Route::get('/user', function (Request $request) {
     return $request->user();
 })->middleware('auth:sanctum');
+
+Route::post('/login', [AuthentificationController::class, 'login']);
 
 Route::get('/usuaris', [UsuariController::class, 'index']);
 
@@ -35,3 +38,4 @@ Route::get('/getOperadores-logisticos', [UsuariController::class, 'getOperadores
 Route::post('/solicitud-oferta', [SolicitudController::class, 'store']);
 
 Route::post('/usuaris', [UsuariController::class, 'store']);
+Route::delete('/usuaris/{usuari}', [UsuariController::class, 'destroy']);
