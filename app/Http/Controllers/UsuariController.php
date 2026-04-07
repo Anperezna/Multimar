@@ -14,9 +14,29 @@ class UsuariController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(Request $request)
     {
-        return Usuari::all();
+        $request->validate([
+            'creador_id' => ['required', 'integer', 'exists:usuaris,id'],
+        ]);
+
+        $usuaris = Usuari::query()
+            ->with(['pais', 'rol'])
+            ->where('usuari_id', (int) $request->query('creador_id'))
+            ->orderByDesc('id')
+            ->get();
+
+        return response()->json(
+            $usuaris->map(fn (Usuari $usuari) => [
+                'id' => $usuari->id,
+                'nombre' => $usuari->nom,
+                'apellidos' => $usuari->cognoms,
+                'dni' => $usuari->dni,
+                'correo' => $usuari->correu,
+                'pais' => $usuari->pais?->nom,
+                'rol' => $usuari->rol?->rol,
+            ])
+        );
     }
 
     /**
@@ -125,7 +145,12 @@ class UsuariController extends Controller
      */
     public function destroy(Usuari $usuari)
     {
-        //
+        try {
+            $usuari->delete();
+            return response()->json(['message' => 'Usuari deleted successfully']);
+        } catch (QueryException $e) {
+            return response()->json(['message' => 'Error deleting usuari', 'error' => $e->getMessage()], 500);
+        }
     }
 
     public function getOperadoresLogisticos()

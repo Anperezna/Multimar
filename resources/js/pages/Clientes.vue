@@ -53,7 +53,7 @@
                                 </td>
                                 <td class="acciones-cell">
                                     <button class="btn-accion" title="Editar">✎</button>
-                                    <button class="btn-accion btn-accion--danger" title="Eliminar">🗑</button>
+                                    <button class="btn-accion btn-accion--danger" title="Eliminar" @click="eliminarUsuario(u.id)">🗑</button>
                                 </td>
                             </tr>
                         </tbody>
@@ -118,9 +118,10 @@
                                 v-model="form.rol"
                                 class="cu-input cu-select"
                             >
-                                <option value="usuari">Cliente</option>
-                                <option value="operador">Operador</option>
-                                <option value="admin">Admin</option>
+                                <option value="4">Cliente</option>
+                                <option value="1">Admin</option>
+                                <option value="2">Operador</option>
+                                <option value="3">Agente Comercial</option>
                             </select>
                         </div>
 
@@ -139,7 +140,7 @@
 </template>
 
 <script setup>
-import { ref, reactive } from 'vue';
+import { onMounted, reactive, ref } from 'vue';
 import Navbar from '@/components/Navbar.vue';
 import Botones from '@/components/Botones.vue';
 import Input from '@/components/Input.vue';
@@ -148,7 +149,7 @@ import api from '@/lib/api';
 // TODO: Reemplazar por el estado real de autenticacion cuando se conecte la BD.
 // Debe coincidir con el valor de usuarioRol en Navbar.vue.
 const usuarioRol = ref('admin');
-const usuarioCreadorId = ref(1);
+const usuarioCreadorId = ref(3);
 
 const mostrarFormulario = ref(false);
 const errorCrear = ref('');
@@ -160,22 +161,39 @@ const form = reactive({
     pais: '',
     correo: '',
     password: '',
-    rol: usuarioRol.value === 'admin' ? 'usuari' : 'usuari',
+    rol: usuarioRol.value === 'admin' ? '4' : '4',
 });
 
-// TODO: Reemplazar por usuarios reales llamando a la API y no acabar muertos.
-const usuarios = ref([
-    { id: 1, nombre: 'Admin',    apellidos: 'User',         correo: 'admin@simex.com',    pais: 'Espana',  rol: 'admin' },
-    { id: 2, nombre: 'Operador', apellidos: 'Logistico',    correo: 'operador@simex.com', pais: 'Espana',  rol: 'operador' },
-    { id: 3, nombre: 'Cliente',  apellidos: 'Regular',      correo: 'usuario@simex.com',  pais: 'Mexico',  rol: 'cliente' },
-    { id: 4, nombre: 'Maria',    apellidos: 'Garcia Lopez', correo: 'maria@simex.com',    pais: 'Espana',  rol: 'cliente' },
-    { id: 5, nombre: 'Pedro',    apellidos: 'Sanchez Ruiz', correo: 'pedro@simex.com',    pais: 'Colombia',rol: 'operador' },
-]);
+const usuarios = ref([]);
+
+async function cargarUsuarios() {
+    try {
+        const { data } = await api.get('/usuaris', {
+            params: { creador_id: usuarioCreadorId.value },
+        });
+
+        usuarios.value = (data || []).map((u) => ({
+            id: u.id,
+            nombre: u.nombre,
+            apellidos: u.apellidos,
+            correo: u.correo,
+            pais: u.pais || '',
+            rol: String(u.rol || '').toLowerCase(),
+        }));
+    } catch (error) {
+        errorCrear.value =
+            error?.response?.data?.message ||
+            error?.response?.data?.error ||
+            Object.values(error?.response?.data?.errors || {}).flat()?.[0] ||
+            error?.message ||
+            'No se pudo cargar el listado de usuarios';
+    }
+}
 
 async function crearUsuario() {
     errorCrear.value = '';
 
-    const nuevoRol = usuarioRol.value === 'operador' ? 'usuari' : form.rol;
+    const nuevoRol = usuarioRol.value === 'operador' ? '4' : form.rol;
 
     try {
         const { data } = await api.post('/usuaris', {
@@ -189,14 +207,7 @@ async function crearUsuario() {
             rol: nuevoRol,
         });
 
-        usuarios.value.push({
-            id: data.id,
-            nombre: data.nombre,
-            apellidos: data.apellidos,
-            correo: data.correo,
-            pais: data.pais,
-            rol: String(data.rol).toLowerCase(),
-        });
+        await cargarUsuarios();
 
         cancelar();
     } catch (error) {
@@ -209,10 +220,33 @@ async function crearUsuario() {
     }
 }
 
+async function eliminarUsuario(id) {
+    errorCrear.value = '';
+
+    const previousUsuarios = [...usuarios.value];
+    usuarios.value = usuarios.value.filter((u) => u.id !== id);
+
+    try {
+        await api.delete(`/usuaris/${id}`);
+    } catch (error) {
+        usuarios.value = previousUsuarios;
+        errorCrear.value =
+            error?.response?.data?.message ||
+            error?.response?.data?.error ||
+            Object.values(error?.response?.data?.errors || {}).flat()?.[0] ||
+            error?.message ||
+            'No se pudo eliminar el usuario';
+    }
+}
+
 function cancelar() {
     mostrarFormulario.value = false;
-    Object.assign(form, { nombre: '', apellidos: '', dni: '', pais: '', correo: '', password: '', rol: 'usuari' });
+    Object.assign(form, { nombre: '', apellidos: '', dni: '', pais: '', correo: '', password: '', rol: '4' });
 }
+
+onMounted(() => {
+    cargarUsuarios();
+});
 </script>
 
 <style scoped>
