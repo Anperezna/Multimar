@@ -16,9 +16,14 @@
             </div>
 
             <div class="shipment-header__actions">
+                <button type="button" class="btn" :disabled="!envio.canEdit" @click="isEditing = !isEditing">
+                    {{ isEditing ? 'Cancelar' : 'Editar' }}
+                </button>
                 <button type="button" class="btn btn--primary">QR</button>
                 <button type="button" class="btn">Descargar Documentos</button>
-                <button type="button" class="btn btn--primary">Guardar Cambios</button>
+                <button type="button" class="btn btn--primary" :disabled="!envio.canEdit || !isEditing || isSaving" @click="saveChanges">
+                    {{ isSaving ? 'Guardando...' : 'Guardar Cambios' }}
+                </button>
             </div>
         </header>
 
@@ -29,28 +34,34 @@
                     <div class="panel__body">
                         <div class="field full">
                             <label>Nombre de la mercancia</label>
-                            <input :value="envio.description" type="text" readonly />
+                            <Input :modelValue="envio.mercanciaNombre || 'No disponible'" type="text" inputClass="detail-input" />
+                        </div>
+
+                        <div class="field full">
+                            <label>Comentarios de la oferta</label>
+                            <Input v-if="isEditing" v-model="editableDescription" type="text" inputClass="detail-input" />
+                            <Input v-else :modelValue="envio.description || 'No disponible'" type="text" inputClass="detail-input" />
                         </div>
 
                         <div class="field-row">
                             <div class="field">
                                 <label>Tipo de mercancia</label>
-                                <input value="General" type="text" readonly />
+                                <Input :modelValue="envio.tipusCarregaNom || 'No disponible'" type="text" inputClass="detail-input" />
                             </div>
                             <div class="field">
                                 <label>Tipo de contenedor</label>
-                                <input value="Contenedor" type="text" readonly />
+                                <Input :modelValue="envio.tipusContenidorNom || 'No disponible'" type="text" inputClass="detail-input" />
                             </div>
                         </div>
 
                         <div class="field-row">
                             <div class="field">
                                 <label>Peso bruto (kg)</label>
-                                <input value="14500" type="text" readonly />
+                                <Input :modelValue="envio.pesoBrut || 'No disponible'" type="text" inputClass="detail-input" />
                             </div>
                             <div class="field">
                                 <label>Volumen (M³)</label>
-                                <input value="32.5" type="text" readonly />
+                                <Input :modelValue="envio.volum || 'No disponible'" type="text" inputClass="detail-input" />
                             </div>
                         </div>
                     </div>
@@ -62,7 +73,7 @@
                         <div class="field-row">
                             <div class="field">
                                 <label>Tipo de Incoterm</label>
-                                <input value="FOB - Free On Board" type="text" readonly />
+                                <Input :modelValue="envio.incotermText || 'No disponible'" type="text" inputClass="detail-input" />
                             </div>
                             <button type="button" class="guide-btn">Ver guia de Incoterms</button>
                         </div>
@@ -75,49 +86,40 @@
                         <div class="field-row">
                             <div class="field">
                                 <label>Origen</label>
-                                <input value="Shenzhen, China" type="text" readonly />
+                                <Input :modelValue="envio.origenNom || 'No disponible'" type="text" inputClass="detail-input" />
                             </div>
                             <div class="field">
                                 <label>Destino</label>
-                                <input value="Valencia, Espana" type="text" readonly />
+                                <Input :modelValue="envio.destinoNom || 'No disponible'" type="text" inputClass="detail-input" />
                             </div>
                         </div>
 
                         <div class="field full">
                             <label>Representante de Venta</label>
-                            <input value="Carlos Mendoza (Operador Logistico)" type="text" readonly />
+                            <Input :modelValue="envio.operadorNom || 'No disponible'" type="text" inputClass="detail-input" />
                         </div>
                     </div>
-                </article>
-
-                <article class="panel timeline-panel">
-                    <header class="panel__title">Seguimiento del Envio</header>
-                    <ul class="timeline">
-                        <li v-for="step in tracking" :key="step.title" :class="`is-${step.state}`">
-                            <span class="dot"></span>
-                            <div>
-                                <p>{{ step.title }}</p>
-                                <small>{{ step.time }}</small>
-                            </div>
-                        </li>
-                    </ul>
                 </article>
             </div>
 
             <aside class="panel map-panel">
-                <header class="panel__title">Ubicacion Actual</header>
-                <div class="map-box">
-                    <img src="/img/incoterm_picture.jpg" alt="Mapa de ubicacion" />
-                </div>
-                <div class="route-line">
+                <header class="panel__title">Resumen de oferta</header>
+                <div class="panel__body summary-list">
                     <div>
-                        <small>Origen</small>
-                        <p>Shenzhen (CN)</p>
+                        <small>Estado</small>
+                        <p>{{ envio.status || 'No disponible' }}</p>
                     </div>
-                    <span>🚢</span>
                     <div>
-                        <small>Destino</small>
-                        <p>Valencia (ES)</p>
+                        <small>Tipo de transporte</small>
+                        <p>{{ envio.tipusTransportNom || 'No disponible' }}</p>
+                    </div>
+                    <div>
+                        <small>Fecha de creación</small>
+                        <p>{{ envio.dataCreacio || 'No disponible' }}</p>
+                    </div>
+                    <div>
+                        <small>Última actualización</small>
+                        <p>{{ envio.lastUpdate || 'No disponible' }}</p>
                     </div>
                 </div>
             </aside>
@@ -126,59 +128,108 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import Input from '@/components/Input.vue';
 import Navbar from '@/components/Navbar.vue';
+import api from '@/lib/api';
 
-type Shipment = {
-    id: number;
-    code: string;
-    operation: 'Importacion' | 'Exportacion';
-    status: string;
-    carrier: string;
-    description: string;
+type OfertaDetalleApi = {
+    id: number | string;
+    ofertaId?: number | null;
+    solicitudId?: number | null;
+    canEdit?: boolean;
+    comentaris?: string | null;
+    operacio_nom?: string | null;
+    transportista_origen_nom?: string | null;
+    estat_oferta_nom?: string | null;
+    code?: string | null;
+    description?: string | null;
+    operation?: string | null;
+    carrier?: string | null;
+    status?: string | null;
+    mercanciaNombre?: string | null;
+    pesoBrut?: string | number | null;
+    volum?: string | number | null;
+    tipusTransportNom?: string | null;
+    tipusContenidorNom?: string | null;
+    tipusCarregaNom?: string | null;
+    origenNom?: string | null;
+    destinoNom?: string | null;
+    operadorNom?: string | null;
+    incotermText?: string | null;
+    dataCreacio?: string | null;
+    lastUpdate?: string | null;
 };
 
 const route = useRoute();
 const router = useRouter();
+const oferta = ref<OfertaDetalleApi | null>(null);
+const isEditing = ref(false);
+const isSaving = ref(false);
+const editableDescription = ref('');
 
-const shipmentSeed: Shipment[] = [
-    { id: 1, code: 'EXP-2024-001', operation: 'Exportacion', status: 'En Transito', carrier: 'Maersk Line', description: 'Componentes electronicos de alta precision' },
-    { id: 2, code: 'IMP-2024-042', operation: 'Importacion', status: 'Completado', carrier: 'UPS', description: 'Textiles premium' },
-    { id: 3, code: 'EXP-2024-003', operation: 'Exportacion', status: 'En Aduana', carrier: 'DHL', description: 'Alimentacion refrigerada' },
-    { id: 4, code: 'IMP-2024-015', operation: 'Importacion', status: 'Pendiente', carrier: 'FedEx', description: 'Maquinaria industrial' },
-    { id: 5, code: 'EXP-2024-007', operation: 'Exportacion', status: 'En Transito', carrier: 'Maersk', description: 'Piezas de automocion' },
-    { id: 6, code: 'IMP-2024-023', operation: 'Importacion', status: 'Completado', carrier: 'SEUR', description: 'Insumos quimicos controlados' },
-    { id: 7, code: 'EXP-2024-011', operation: 'Exportacion', status: 'Cancelado', carrier: 'UPS', description: 'Carga farmaceutica' },
-    { id: 8, code: 'IMP-2024-031', operation: 'Importacion', status: 'En Transito', carrier: 'DHL', description: 'Electronica de consumo' },
-    { id: 9, code: 'EXP-2024-061', operation: 'Exportacion', status: 'Pendiente', carrier: 'MSC', description: 'Madera tratada' },
-];
+const loadOferta = async () => {
+    try {
+        const id = Number(route.params.id);
+        const { data } = await api.get(`/ofertes/${id}`);
+        oferta.value = data;
+        editableDescription.value = data.description || data.comentaris || '';
+    } catch (error) {
+        console.error('Error cargando detalle de oferta:', error);
+    }
+};
 
 const envio = computed(() => {
     const id = Number(route.params.id);
-    return (
-        shipmentSeed.find((item) => item.id === id) ?? {
-            id,
-            code: `ENV-${String(id).padStart(3, '0')}`,
-            operation: 'Exportacion',
-            status: 'En Transito',
-            carrier: 'Por definir',
-            description: 'Descripcion pendiente',
-        }
-    );
+    const ofertaId = oferta.value?.ofertaId ?? null;
+    const canEdit = Boolean(oferta.value?.canEdit && ofertaId);
+
+    return {
+        id: ofertaId ?? id,
+        canEdit,
+        code: String(oferta.value?.code ?? ofertaId ?? oferta.value?.id ?? id),
+        operation: oferta.value?.operation?.trim() || oferta.value?.operacio_nom?.trim() || 'No disponible',
+        status: oferta.value?.status?.trim() || oferta.value?.estat_oferta_nom?.trim() || 'No disponible',
+        carrier: oferta.value?.carrier?.trim() || oferta.value?.transportista_origen_nom?.trim() || 'No disponible',
+        description: oferta.value?.description?.trim() || oferta.value?.comentaris?.trim() || 'No disponible',
+        mercanciaNombre: oferta.value?.mercanciaNombre?.trim() || 'No disponible',
+        pesoBrut: oferta.value?.pesoBrut ?? 'No disponible',
+        volum: oferta.value?.volum ?? 'No disponible',
+        tipusTransportNom: oferta.value?.tipusTransportNom?.trim() || 'No disponible',
+        tipusContenidorNom: oferta.value?.tipusContenidorNom?.trim() || 'No disponible',
+        tipusCarregaNom: oferta.value?.tipusCarregaNom?.trim() || 'No disponible',
+        origenNom: oferta.value?.origenNom?.trim() || 'No disponible',
+        destinoNom: oferta.value?.destinoNom?.trim() || 'No disponible',
+        operadorNom: oferta.value?.operadorNom?.trim() || 'No disponible',
+        incotermText: oferta.value?.incotermText?.trim() || 'No disponible',
+        dataCreacio: oferta.value?.dataCreacio?.trim() || 'No disponible',
+        lastUpdate: oferta.value?.lastUpdate?.trim() || 'No disponible',
+    };
 });
 
-const tracking = [
-    { title: 'Preparacion de mercaderia', time: '12 Oct, 08:30', state: 'done' },
-    { title: 'Transporte interior origen', time: '13 Oct, 14:15', state: 'done' },
-    { title: 'Terminal / Puerto origen', time: '14 Oct, 09:00', state: 'done' },
-    { title: 'Carga a bordo', time: '15 Oct, 11:15', state: 'done' },
-    { title: 'Transporte maritimo', time: 'En curso', state: 'active' },
-    { title: 'Puerto destino', time: 'Pendiente', state: 'pending' },
-    { title: 'Aduana importacion', time: 'Pendiente', state: 'pending' },
-    { title: 'Transporte interior destino', time: 'Pendiente', state: 'pending' },
-    { title: 'Entrega final', time: 'Pendiente', state: 'pending' },
-];
+onMounted(loadOferta);
+
+const saveChanges = async () => {
+    if (!oferta.value?.ofertaId || !oferta.value?.canEdit) return;
+
+    isSaving.value = true;
+
+    try {
+        const id = Number(oferta.value.ofertaId);
+        const { data } = await api.put(`/ofertes/${id}`, {
+            comentaris: editableDescription.value,
+        });
+
+        oferta.value = data;
+        editableDescription.value = data.description || data.comentaris || '';
+        isEditing.value = false;
+    } catch (error) {
+        console.error('Error guardando oferta:', error);
+    } finally {
+        isSaving.value = false;
+    }
+};
 </script>
 
 <style scoped>
@@ -317,6 +368,37 @@ const tracking = [
     color: #1f3a59;
     background: #fdfefe;
     font-size: 13px;
+}
+
+:deep(.detail-input) {
+    width: 100%;
+    height: 38px;
+    border: 1px solid #d6e0ec;
+    border-radius: 7px;
+    padding: 0 10px;
+    color: #1f3a59;
+    background: #fdfefe;
+    font-size: 13px;
+    box-sizing: border-box;
+}
+
+.summary-list {
+    display: grid;
+    gap: 12px;
+}
+
+.summary-list small {
+    display: block;
+    color: #8ba1b8;
+    font-size: 10px;
+    margin-bottom: 4px;
+}
+
+.summary-list p {
+    margin: 0;
+    font-size: 13px;
+    color: #1f3a59;
+    font-weight: 600;
 }
 
 .guide-btn {

@@ -50,8 +50,8 @@ const routes = [
         component: SolicitudOferta
     },
     {
-        path: '/envios/:id',
-        name: 'detalle-envio',
+        path: '/ofertas/:id',
+        name: 'detalle-oferta',
         component: DetalleEnvio
     }
 ];

@@ -24,6 +24,8 @@ Route::get('/usuaris', [UsuariController::class, 'index']);
 Route::get('/ciutats', [CiutatController::class, 'index']);
 Route::get('/incoterms', [IncotermController::class, 'index']);
 Route::get('/ofertes', [OfertaController::class, 'index']);
+Route::get('/ofertes/{id}', [OfertaController::class, 'show']);
+Route::put('/ofertes/{oferta}', [OfertaController::class, 'update']);
 
 Route::get('/tipos-contenedor', [TipusContenidorController::class, 'index']);
 

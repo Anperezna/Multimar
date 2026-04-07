@@ -7,17 +7,21 @@ use Illuminate\Http\Request;
 
 class OfertaController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
-    public function index()
+    private function ofertaQuery()
     {
-        $ofertes = Oferta::query()
+        return Oferta::query()
             ->leftJoin('tipus_transports as tt', 'ofertes.tipus_transport_id', '=', 'tt.id')
             ->leftJoin('transportistes as tr', 'ofertes.transportista_origen_id', '=', 'tr.id')
             ->leftJoin('estats_ofertes as eo', 'ofertes.estat_oferta_id', '=', 'eo.id')
             ->leftJoin('solicitud as so', 'ofertes.solicitud_id', '=', 'so.id')
             ->leftJoin('tipus_fluxes as tf', 'so.tipus_fluxe_id', '=', 'tf.id')
+            ->leftJoin('ciutats as co', 'so.origen_id', '=', 'co.id')
+            ->leftJoin('ciutats as cd', 'so.destino_id', '=', 'cd.id')
+            ->leftJoin('usuaris as u', 'so.operador_id', '=', 'u.id')
+            ->leftJoin('tipus_contenidors as tcon', 'so.tipus_contenidor_id', '=', 'tcon.id')
+            ->leftJoin('tipus_carrega as tcar', 'so.tipus_carrega_id', '=', 'tcar.id')
+            ->leftJoin('incoterms as i', 'so.incoterm_id', '=', 'i.id')
+            ->leftJoin('tipus_incoterms as ti', 'i.tipus_inconterm_id', '=', 'ti.id')
             ->select([
                 'ofertes.id',
                 'ofertes.comentaris',
@@ -32,9 +36,56 @@ class OfertaController extends Controller
                 'tr.nom as transportista_origen_nom',
                 'eo.estat as estat_oferta_nom',
                 'tf.tipus as operacio_nom',
-            ])
+                'so.mercancia_nombre',
+                'so.pes_brut',
+                'so.volum',
+                'tcon.tipus as tipus_contenidor_nom',
+                'tcar.tipus as tipus_carrega_nom',
+                'co.nom as origen_nom',
+                'cd.nom as destino_nom',
+                'u.nom as operador_nom',
+                'u.cognoms as operador_cognoms',
+                'i.id as incoterm_id',
+                'ti.codi as incoterm_codi',
+                'ti.nom as incoterm_nom',
+            ]);
+    }
+
+    private function toFrontendOferta($oferta)
+    {
+        $id = (int) $oferta->id;
+
+        return [
+            'id' => $id,
+            'code' => (string) $id,
+            'description' => trim((string) ($oferta->comentaris ?? '')),
+            'operation' => trim((string) ($oferta->operacio_nom ?? '')),
+            'status' => trim((string) ($oferta->estat_oferta_nom ?? '')),
+            'carrier' => trim((string) ($oferta->transportista_origen_nom ?? '')),
+            'lastUpdate' => $oferta->etd ?: $oferta->eta ?: $oferta->data_creacio,
+            'mercanciaNombre' => trim((string) ($oferta->mercancia_nombre ?? '')),
+            'pesoBrut' => $oferta->pes_brut,
+            'volum' => $oferta->volum,
+            'tipusTransportNom' => trim((string) ($oferta->tipus_transport_nom ?? '')),
+            'tipusContenidorNom' => trim((string) ($oferta->tipus_contenidor_nom ?? '')),
+            'tipusCarregaNom' => trim((string) ($oferta->tipus_carrega_nom ?? '')),
+            'origenNom' => trim((string) ($oferta->origen_nom ?? '')),
+            'destinoNom' => trim((string) ($oferta->destino_nom ?? '')),
+            'operadorNom' => trim((string) (($oferta->operador_nom ?? '') . ' ' . ($oferta->operador_cognoms ?? ''))),
+            'incotermText' => trim((string) (($oferta->incoterm_codi ?? '') . ' ' . ($oferta->incoterm_nom ?? ''))),
+        ];
+    }
+
+    /**
+     * Display a listing of the resource.
+     */
+    public function index()
+    {
+        $ofertes = $this->ofertaQuery()
             ->orderByDesc('ofertes.id')
-            ->get();
+            ->get()
+            ->map(fn ($oferta) => $this->toFrontendOferta($oferta))
+            ->values();
 
         return response()->json($ofertes);
     }
@@ -50,9 +101,17 @@ class OfertaController extends Controller
     /**
      * Display the specified resource.
      */
-    public function show(Oferta $oferta)
+    public function show(int $id)
     {
-        //
+        $oferta = $this->ofertaQuery()
+            ->where('ofertes.id', $id)
+            ->first();
+
+        if (!$oferta) {
+            return response()->json(['message' => 'Oferta no encontrada'], 404);
+        }
+
+        return response()->json($this->toFrontendOferta($oferta));
     }
 
     /**
@@ -60,7 +119,14 @@ class OfertaController extends Controller
      */
     public function update(Request $request, Oferta $oferta)
     {
-        //
+        $request->validate([
+            'comentaris' => ['nullable', 'string', 'max:255'],
+        ]);
+
+        $oferta->comentaris = $request->input('comentaris', $oferta->comentaris);
+        $oferta->save();
+
+        return response()->json($this->toFrontendOferta($oferta));
     }
 
     /**
