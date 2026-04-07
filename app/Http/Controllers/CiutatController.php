@@ -12,7 +12,12 @@ class CiutatController extends Controller
      */
     public function index()
     {
-        //
+        $ciutats = Ciutat::query()
+            ->select(['id', 'nom'])
+            ->orderBy('nom')
+            ->get();
+
+        return response()->json($ciutats);
     }
 
     /**

@@ -12,7 +12,20 @@ class IncotermController extends Controller
      */
     public function index()
     {
-        return Incoterm::all();
+        return Incoterm::query()
+            ->with('tipusIncoterm:id,codi,nom')
+            ->get()
+            ->map(function (Incoterm $incoterm) {
+                $tipus = $incoterm->tipusIncoterm;
+
+                return [
+                    'id' => $incoterm->id,
+                    'label' => $tipus
+                        ? trim(($tipus->codi ?? '').' - '.($tipus->nom ?? ''))
+                        : 'Incoterm '.$incoterm->id,
+                ];
+            })
+            ->values();
     }
 
     /**
