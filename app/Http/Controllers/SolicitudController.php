@@ -20,20 +20,28 @@ class SolicitudController extends Controller
      */
     public function store(Request $request)
     {
+        $request->validate([
+            'origen_id' => ['required', 'integer', 'exists:ciutats,id'],
+            'destino_id' => ['required', 'integer', 'exists:ciutats,id'],
+            'incoterm_id' => ['required', 'integer', 'exists:incoterms,id'],
+        ]);
+
         $crearSolicitud = new Solicitud;
+        $crearSolicitud->id = (int) (Solicitud::max('id') ?? 0) + 1;
         $crearSolicitud->mercancia_nombre = $request->input('nombreMercancia', 'Sin especificar');
         $crearSolicitud->pes_brut = (float) $request->input('pesoBruto', 0);
         $crearSolicitud->volum = (float) $request->input('volumen', 0);
-        $crearSolicitud->client_id = (int) $request->input('client_id', 1);
-        $crearSolicitud->operador_id = (int) $request->input('operador', 1);
-        $crearSolicitud->mercancia_tipus = (int) $request->input('tipoMercancia', 1);
-        $crearSolicitud->tipus_transport_id = (int) $request->input('tipus_transport_id', 1);
-        $crearSolicitud->tipus_contenidor_id = (int) $request->input('tipoContenedor', 1);
-        $crearSolicitud->origen_id = (int) $request->input('origen_id', $request->input('origen', 1));
-        $crearSolicitud->destino_id = (int) $request->input('destino_id', $request->input('destino', 1));
-        $crearSolicitud->incoterm_id = (int) $request->input('incoterm', 1);
-        $crearSolicitud->tipus_fluxe_id = (int) $request->input('tipus_fluxe_id', 1);
-        $crearSolicitud->tipus_carrega_id = (int) $request->input('tipoMercancia', 1);
+        $crearSolicitud->client_id = $request->integer('client_id', 1);
+        $crearSolicitud->operador_id = $request->integer('operador', 1);
+        $crearSolicitud->mercancia_tipus = $request->integer('tipoMercancia', 1);
+        $crearSolicitud->tipus_transport_id = $request->integer('tipus_transport_id', 1);
+        $crearSolicitud->tipus_contenidor_id = $request->integer('tipoContenedor', 1);
+        $crearSolicitud->origen_id = $request->integer('origen_id', 1);
+        $crearSolicitud->destino_id = $request->integer('destino_id', 1);
+        $crearSolicitud->incoterm_id = $request->integer('incoterm_id', 1);
+        $crearSolicitud->tipus_fluxe_id = $request->integer('tipus_fluxe_id', 1);
+        $crearSolicitud->tipus_carrega_id = $request->integer('tipoCarrega', 1);
+        
         $crearSolicitud->save();
 
         return response()->json(['message' => 'Solicitud creada exitosamente'], 201);

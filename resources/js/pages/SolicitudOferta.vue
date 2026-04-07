@@ -84,7 +84,7 @@
                         <label class="form-label">Tipo de Incoterm</label>
                         <Desplegable
                             v-model="formData.incoterm"
-                            :options="tiposIncoterm"
+                            :options="incoterms"
                             placeholder="Seleccionar incoterm..."
                             selectClass="form-select"
                         />
@@ -103,20 +103,20 @@
                     <div class="form-row">
                         <div class="form-group">
                             <label class="form-label">Origen</label>
-                            <Input 
+                            <Desplegable
                                 v-model="formData.origen"
-                                type="text" 
-                                placeholder="Ciudad, País"
-                                inputClass="form-input"
+                                :options="ciutats"
+                                placeholder="Seleccionar ciudad de origen..."
+                                selectClass="form-select"
                             />
                         </div>
                         <div class="form-group">
                             <label class="form-label">Destino</label>
-                            <Input 
+                            <Desplegable
                                 v-model="formData.destino"
-                                type="text" 
-                                placeholder="Ciudad, País"
-                                inputClass="form-input"
+                                :options="ciutats"
+                                placeholder="Seleccionar ciudad de destino..."
+                                selectClass="form-select"
                             />
                         </div>
                     </div>
@@ -171,6 +171,12 @@ const formData = ref({
 const isSubmitting = ref(false);
 const statusMessage = ref('');
 
+const ciudadesData = await axios.get('/api/ciutats');
+const ciutats = ref(ciudadesData.data.map(item => ({
+    value: item.id,
+    label: item.nom
+})));
+
 const tiposCargaData = await axios.get('/api/tipos-carga');
 const tiposCarga = ref(tiposCargaData.data.map(item => ({
   value: item.id,
@@ -184,10 +190,10 @@ const tiposContenedor = ref(tiposContenedorData.data.map(item => ({
   label: item.tipus
 }))); 
 
-const tiposIncotermData = await axios.get('/api/tipos-incoterm');
-const tiposIncoterm = ref(tiposIncotermData.data.map(item => ({
-  value: item.id,
-  label: item.codi.trim() + ' ' + item.nom.trim()
+const incotermsData = await axios.get('/api/incoterms');
+const incoterms = ref(incotermsData.data.map(item => ({
+    value: item.id,
+    label: item.label
 }))); 
 
 const operadoresLogisticosData = await axios.get('/api/getOperadores-logisticos');
@@ -207,9 +213,9 @@ const crearSolicitud = async () => {
             tipoContenedor: formData.value.tipoContenedor,
             pesoBruto: formData.value.pesoBruto,
             volumen: formData.value.volumen,
-            incoterm: formData.value.incoterm,
-            origen: formData.value.origen,
-            destino: formData.value.destino,
+            incoterm_id: formData.value.incoterm,
+            origen_id: formData.value.origen,
+            destino_id: formData.value.destino,
             operador: formData.value.operador,
         });
 

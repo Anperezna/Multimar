@@ -4,6 +4,7 @@ use App\Http\Controllers\UsuariController;
 use App\Http\Controllers\IncotermController;
 use App\Http\Controllers\OfertaController;
 use App\Http\Controllers\SolicitudController;
+use App\Http\Controllers\CiutatController;
 use App\Http\Controllers\TipusContenidorController;
 use App\Http\Controllers\TipusCarregaController;
 use App\Http\Controllers\TipusIncotermController;
@@ -17,6 +18,7 @@ Route::get('/user', function (Request $request) {
 
 Route::get('/usuaris', [UsuariController::class, 'index']);
 
+Route::get('/ciutats', [CiutatController::class, 'index']);
 Route::get('/incoterms', [IncotermController::class, 'index']);
 Route::get('/ofertes', [OfertaController::class, 'index']);
 
