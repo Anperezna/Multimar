@@ -10,6 +10,7 @@ import EditarContrasena from '@/pages/EditarContrasena.vue';
 import Accesibilidad from '@/pages/Accesibilidad.vue';
 import Incoterm from '@/pages/Incoterm.vue';
 import SolicitudOferta from '@/pages/SolicitudOferta.vue';
+import Ofertas from '@/pages/Ofertas.vue';
 import DetalleEnvio from '@/pages/DetalleEnvio.vue';
 
 
@@ -51,6 +52,10 @@ const routes = [
         component: SolicitudOferta
     },
     {
+        path: '/ofertas',
+        component: Ofertas,
+    },
+    {
         path: '/ofertas/:id',
         name: 'detalle-oferta',
         component: DetalleEnvio
@@ -77,18 +82,34 @@ router.beforeEach(async (to) => {
 
     try {
         const { data } = await api.get('/user');
+        const resolvedRole =
+            typeof data?.rol === 'string'
+                ? data.rol
+                : data?.rol?.rol;
+        const resolvedName =
+            [data?.nombre ?? data?.nom, data?.apellidos ?? data?.cognoms]
+                .filter(Boolean)
+                .join(' ')
+                .trim() ||
+            data?.name ||
+            data?.correo ||
+            data?.correu ||
+            '';
 
-        if (data && data.rol && data.rol.rol) {
-            localStorage.setItem('user_rol', data.rol.rol);
+        if (resolvedRole) {
+            localStorage.setItem('user_rol', resolvedRole);
+            localStorage.setItem('user_name', resolvedName);
             return true;
         }
 
         localStorage.removeItem('auth_token');
         localStorage.removeItem('user_rol');
+        localStorage.removeItem('user_name');
         return '/login';
     } catch (error) {
         localStorage.removeItem('auth_token');
         localStorage.removeItem('user_rol');
+        localStorage.removeItem('user_name');
         return '/login';
     }
 });

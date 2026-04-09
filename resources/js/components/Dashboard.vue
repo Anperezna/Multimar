@@ -44,10 +44,16 @@
             </div>
 
             <div class="table-wrap">
-                <table>
+                <div v-if="isLoading" class="table-loading">
+                    <span class="table-loading__spinner" aria-label="Cargando envios"></span>
+                    <p>Cargando envios...</p>
+                </div>
+
+                <table v-else>
                     <thead>
                         <tr>
                             <th>ID</th>
+                            <th>Tipo</th>
                             <th>Descripcion</th>
                             <th>Estado</th>
                             <th>Transportista</th>
@@ -56,8 +62,13 @@
                         </tr>
                     </thead>
                     <tbody>
-                        <tr v-for="shipment in paginatedShipments" :key="shipment.id">
+                        <tr v-for="shipment in paginatedShipments" :key="shipment.rowKey">
                             <td class="mono">{{ shipment.code }}</td>
+                            <td>
+                                <span class="type-badge" :class="`is-${shipment.kindTone}`">
+                                    {{ shipment.kind }}
+                                </span>
+                            </td>
                             <td>
                                 <p class="desc-title">{{ shipment.description }}</p>
                                 <p class="desc-type">{{ shipment.operation }}</p>
@@ -76,10 +87,11 @@
                                 <button
                                     type="button"
                                     class="detail-btn"
-                                    aria-label="Ver detalles del envio"
-                                    @click="router.push({ name: 'detalle-oferta', params: { id: shipment.id } })"
+                                    :disabled="shipment.kind === 'Solicitud'"
+                                    :aria-label="shipment.kind === 'Solicitud' ? 'Sin detalle disponible' : 'Ver detalles del envio'"
+                                    @click="shipment.kind === 'Oferta' && router.push({ name: 'detalle-oferta', params: { id: shipment.id } })"
                                 >
-                                    Ver
+                                    {{ shipment.kind === 'Oferta' ? 'Ver' : 'Sin detalle' }}
                                 </button>
                             </td>
                         </tr>
@@ -130,6 +142,7 @@ type StatusTone = 'info' | 'success' | 'warning' | 'danger';
 type OfertaApi = {
     id: number | string;
     code: string;
+    kind: 'Oferta' | 'Solicitud';
     description: string;
     operation: string;
     status: string;
@@ -139,7 +152,10 @@ type OfertaApi = {
 
 interface ShipmentRow {
     id: number;
+    rowKey: string;
     code: string;
+    kind: 'Oferta' | 'Solicitud';
+    kindTone: StatusTone;
     description: string;
     operation: string;
     status: string;
@@ -163,6 +179,7 @@ const pageSize = 8;
 const router = useRouter();
 const ofertas = ref<OfertaApi[]>([]);
 const apiError = ref('');
+const isLoading = ref(false);
 
 const toneFromStatus = (status?: string | null): StatusTone => {
     const value = (status || '').toLowerCase();
@@ -176,7 +193,10 @@ const shipments = computed<ShipmentRow[]>(() => {
     return ofertas.value.map((oferta) => {
         return {
             id: Number(oferta.id),
+            rowKey: `${oferta.kind}-${oferta.id}`,
             code: oferta.code,
+            kind: oferta.kind,
+            kindTone: oferta.kind === 'Solicitud' ? 'warning' : 'info',
             description: oferta.description,
             operation: oferta.operation,
             status: oferta.status,
@@ -252,13 +272,23 @@ const summaryCards = computed<SummaryCard[]>(() => {
 
 const fetchBackendData = async () => {
     apiError.value = '';
+    isLoading.value = true;
 
     try {
-        const { data } = await api.get('/ofertes');
-        ofertas.value = Array.isArray(data) ? data : [];
+        const [ofertasResponse, solicitudesResponse] = await Promise.all([
+            api.get('/ofertes'),
+            api.get('/solicitudes'),
+        ]);
+
+        const ofertasData = Array.isArray(ofertasResponse.data) ? ofertasResponse.data : [];
+        const solicitudesData = Array.isArray(solicitudesResponse.data) ? solicitudesResponse.data : [];
+
+        ofertas.value = [...ofertasData, ...solicitudesData].sort((left, right) => Number(right.id) - Number(left.id));
     } catch (error) {
-        apiError.value = 'No se pudieron cargar las ofertas desde backend.';
+        apiError.value = 'No se pudieron cargar las ofertas y solicitudes desde backend.';
         console.error('Error Axios:', error);
+    } finally {
+        isLoading.value = false;
     }
 };
 
@@ -480,6 +510,25 @@ watch(search, () => {
     overflow-x: auto;
 }
 
+.table-loading {
+    min-height: 220px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    color: var(--text-soft);
+
+    &__spinner {
+        width: 34px;
+        height: 34px;
+        border: 3px solid #d7e3f2;
+        border-top-color: #3b82f6;
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+    }
+}
+
 table {
     width: 100%;
     border-collapse: collapse;
@@ -525,6 +574,15 @@ table {
     color: #91a1b7;
 }
 
+.type-badge {
+    display: inline-flex;
+    align-items: center;
+    border-radius: 999px;
+    padding: 5px 10px;
+    font-size: 0.74rem;
+    font-weight: 700;
+}
+
 .status-badge {
     display: inline-flex;
     align-items: center;
@@ -537,6 +595,12 @@ table {
 .pagination {
     display: flex;
     gap: 8px;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
 }
 
 @media (max-width: 1080px) {

@@ -25,7 +25,11 @@
                         </Botones>
                     </div>
 
-                    <table class="listado-table">
+                    <div v-if="isLoadingUsuarios" class="listado-loading" aria-label="Cargando usuarios">
+                        <span class="listado-spinner"></span>
+                    </div>
+
+                    <table v-else class="listado-table">
                         <thead>
                             <tr>
                                 <th>Nombre</th>
@@ -153,6 +157,7 @@ const usuarioCreadorId = ref(3);
 
 const mostrarFormulario = ref(false);
 const errorCrear = ref('');
+const isLoadingUsuarios = ref(false);
 
 const form = reactive({
     nombre: '',
@@ -167,6 +172,8 @@ const form = reactive({
 const usuarios = ref([]);
 
 async function cargarUsuarios() {
+    isLoadingUsuarios.value = true;
+
     try {
         const { data } = await api.get('/usuaris', {
             params: { creador_id: usuarioCreadorId.value },
@@ -187,6 +194,8 @@ async function cargarUsuarios() {
             Object.values(error?.response?.data?.errors || {}).flat()?.[0] ||
             error?.message ||
             'No se pudo cargar el listado de usuarios';
+    } finally {
+        isLoadingUsuarios.value = false;
     }
 }
 
@@ -326,6 +335,28 @@ onMounted(() => {
 
 .listado-table tbody tr:last-child td {
     border-bottom: 0;
+}
+
+.listado-loading {
+    min-height: 160px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.listado-spinner {
+    width: 34px;
+    height: 34px;
+    border: 3px solid #d9e3ef;
+    border-top-color: #1d4ed8;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
 }
 
 .rol-badge {
