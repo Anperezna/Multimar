@@ -1,4 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router';
+import api from '@/lib/api';
 
 import Login from '../pages/Login.vue';
 import Welcome from '../pages/Welcome.vue';
@@ -59,6 +60,37 @@ const routes = [
 const router = createRouter({
     history: createWebHistory(),
     routes,
+});
+
+const publicPaths = ['/', '/login'];
+
+router.beforeEach(async (to) => {
+    if (publicPaths.includes(to.path)) {
+        return true;
+    }
+
+    const token = localStorage.getItem('auth_token');
+
+    if (!token) {
+        return '/login';
+    }
+
+    try {
+        const { data } = await api.get('/user');
+
+        if (data && data.rol && data.rol.rol) {
+            localStorage.setItem('user_rol', data.rol.rol);
+            return true;
+        }
+
+        localStorage.removeItem('auth_token');
+        localStorage.removeItem('user_rol');
+        return '/login';
+    } catch (error) {
+        localStorage.removeItem('auth_token');
+        localStorage.removeItem('user_rol');
+        return '/login';
+    }
 });
 
 export default router;
