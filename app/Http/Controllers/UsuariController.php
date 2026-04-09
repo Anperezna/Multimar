@@ -11,6 +11,95 @@ use Illuminate\Support\Facades\Hash;
 
 class UsuariController extends Controller
 {
+    private function profilePayload(Usuari $usuari): array
+    {
+        return [
+            'id' => $usuari->id,
+            'nombre' => $usuari->nom,
+            'apellidos' => $usuari->cognoms,
+            'empresa' => $usuari->empresa,
+            'pais' => $usuari->pais?->nom,
+            'correo' => $usuari->correu,
+            'rol' => $usuari->rol?->rol,
+        ];
+    }
+
+    public function me(Request $request)
+    {
+        /** @var Usuari|null $usuari */
+        $usuari = $request->user();
+
+        if (! $usuari) {
+            return response()->json(['error' => 'No autenticado'], 401);
+        }
+
+        $usuari->load(['rol', 'pais']);
+
+        return response()->json($this->profilePayload($usuari));
+    }
+
+    public function updateProfile(Request $request)
+    {
+        /** @var Usuari|null $usuari */
+        $usuari = $request->user();
+
+        if (! $usuari) {
+            return response()->json(['error' => 'No autenticado'], 401);
+        }
+
+        $request->validate([
+            'nombre' => ['required', 'string', 'max:50'],
+            'apellidos' => ['required', 'string', 'max:50'],
+            'empresa' => ['nullable', 'string', 'max:100'],
+            'pais' => ['nullable', 'string', 'max:50'],
+            'correo' => ['required', 'email', 'max:50', 'unique:usuaris,correu,' . $usuari->id],
+        ]);
+
+        $usuari->nom = trim((string) $request->input('nombre'));
+        $usuari->cognoms = trim((string) $request->input('apellidos'));
+        $usuari->empresa = trim((string) $request->input('empresa')) ?: null;
+        $usuari->correu = trim((string) $request->input('correo'));
+
+        $paisInput = trim((string) $request->input('pais'));
+        if ($paisInput !== '') {
+            $pais = Pais::query()->firstOrCreate(['nom' => $paisInput]);
+            $usuari->pais_id = $pais->id;
+        }
+
+        $usuari->save();
+        $usuari->load(['rol', 'pais']);
+
+        return response()->json($this->profilePayload($usuari));
+    }
+
+    public function updatePassword(Request $request)
+    {
+        /** @var Usuari|null $usuari */
+        $usuari = $request->user();
+
+        if (! $usuari) {
+            return response()->json(['error' => 'No autenticado'], 401);
+        }
+
+        $request->validate([
+            'current_password' => ['required', 'string'],
+            'new_password' => ['required', 'string', 'min:6', 'confirmed'],
+        ]);
+
+        if (! Hash::check((string) $request->input('current_password'), (string) $usuari->contrasenya)) {
+            return response()->json([
+                'message' => 'La contrasena actual no es correcta.',
+            ], 422);
+        }
+
+        $usuari->contrasenya = Hash::make((string) $request->input('new_password'));
+        $usuari->save();
+
+        return response()->json([
+            'message' => 'Contrasena actualizada correctamente.',
+        ]);
+    }
+
     /**
      * Display a listing of the resource.
      */

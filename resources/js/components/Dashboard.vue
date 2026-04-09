@@ -53,6 +53,7 @@
                     <thead>
                         <tr>
                             <th>ID</th>
+                            <th>Tipo</th>
                             <th>Descripcion</th>
                             <th>Estado</th>
                             <th>Transportista</th>
@@ -61,8 +62,13 @@
                         </tr>
                     </thead>
                     <tbody>
-                        <tr v-for="shipment in paginatedShipments" :key="shipment.id">
+                        <tr v-for="shipment in paginatedShipments" :key="shipment.rowKey">
                             <td class="mono">{{ shipment.code }}</td>
+                            <td>
+                                <span class="type-badge" :class="`is-${shipment.kindTone}`">
+                                    {{ shipment.kind }}
+                                </span>
+                            </td>
                             <td>
                                 <p class="desc-title">{{ shipment.description }}</p>
                                 <p class="desc-type">{{ shipment.operation }}</p>
@@ -81,10 +87,11 @@
                                 <button
                                     type="button"
                                     class="detail-btn"
-                                    aria-label="Ver detalles del envio"
-                                    @click="router.push({ name: 'detalle-oferta', params: { id: shipment.id } })"
+                                    :disabled="shipment.kind === 'Solicitud'"
+                                    :aria-label="shipment.kind === 'Solicitud' ? 'Sin detalle disponible' : 'Ver detalles del envio'"
+                                    @click="shipment.kind === 'Oferta' && router.push({ name: 'detalle-oferta', params: { id: shipment.id } })"
                                 >
-                                    Ver
+                                    {{ shipment.kind === 'Oferta' ? 'Ver' : 'Sin detalle' }}
                                 </button>
                             </td>
                         </tr>
@@ -135,6 +142,7 @@ type StatusTone = 'info' | 'success' | 'warning' | 'danger';
 type OfertaApi = {
     id: number | string;
     code: string;
+    kind: 'Oferta' | 'Solicitud';
     description: string;
     operation: string;
     status: string;
@@ -144,7 +152,10 @@ type OfertaApi = {
 
 interface ShipmentRow {
     id: number;
+    rowKey: string;
     code: string;
+    kind: 'Oferta' | 'Solicitud';
+    kindTone: StatusTone;
     description: string;
     operation: string;
     status: string;
@@ -182,7 +193,10 @@ const shipments = computed<ShipmentRow[]>(() => {
     return ofertas.value.map((oferta) => {
         return {
             id: Number(oferta.id),
+            rowKey: `${oferta.kind}-${oferta.id}`,
             code: oferta.code,
+            kind: oferta.kind,
+            kindTone: oferta.kind === 'Solicitud' ? 'warning' : 'info',
             description: oferta.description,
             operation: oferta.operation,
             status: oferta.status,
@@ -261,10 +275,17 @@ const fetchBackendData = async () => {
     isLoading.value = true;
 
     try {
-        const { data } = await api.get('/ofertes');
-        ofertas.value = Array.isArray(data) ? data : [];
+        const [ofertasResponse, solicitudesResponse] = await Promise.all([
+            api.get('/ofertes'),
+            api.get('/solicitudes'),
+        ]);
+
+        const ofertasData = Array.isArray(ofertasResponse.data) ? ofertasResponse.data : [];
+        const solicitudesData = Array.isArray(solicitudesResponse.data) ? solicitudesResponse.data : [];
+
+        ofertas.value = [...ofertasData, ...solicitudesData].sort((left, right) => Number(right.id) - Number(left.id));
     } catch (error) {
-        apiError.value = 'No se pudieron cargar las ofertas desde backend.';
+        apiError.value = 'No se pudieron cargar las ofertas y solicitudes desde backend.';
         console.error('Error Axios:', error);
     } finally {
         isLoading.value = false;
@@ -551,6 +572,15 @@ table {
     margin: 3px 0 0;
     font-size: 0.74rem;
     color: #91a1b7;
+}
+
+.type-badge {
+    display: inline-flex;
+    align-items: center;
+    border-radius: 999px;
+    padding: 5px 10px;
+    font-size: 0.74rem;
+    font-weight: 700;
 }
 
 .status-badge {

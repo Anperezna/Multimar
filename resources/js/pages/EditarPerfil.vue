@@ -4,12 +4,18 @@
             <h2>Editar Perfil</h2>
             <p>Actualiza tu informacion personal.</p>
 
-            <form class="panel-form" @submit.prevent>
+            <div v-if="isLoading" class="feedback info loading-row" aria-label="Cargando perfil">
+                <span class="spinner"></span>
+            </div>
+            <p v-if="saveSuccess" class="feedback success">Perfil actualizado correctamente.</p>
+            <p v-if="saveError" class="feedback error">{{ saveError }}</p>
+
+            <form class="panel-form" @submit.prevent="saveProfile">
                 <div class="avatar-row">
-                    <div class="avatar">CR</div>
+                    <div class="avatar">{{ avatarInitials }}</div>
                     <div>
-                        <strong>Cliente Regular</strong>
-                        <small>usuario@simex.com</small>
+                        <strong>{{ fullName }}</strong>
+                        <small>{{ profile.correo || 'Sin correo' }}</small>
                     </div>
                 </div>
 
@@ -49,13 +55,11 @@
                         <label for="pais">Pais</label>
                         <select id="pais" v-model="profile.pais" class="settings-input settings-select">
                             <option disabled value="">Seleccionar pais...</option>
-                            <option>Espana</option>
-                            <option>Portugal</option>
-                            <option>Francia</option>
+                            <option v-for="country in countryOptions" :key="country">{{ country }}</option>
                         </select>
                     </div>
 
-                    <div class="field">
+                    <div class="field field--full">
                         <label for="correo">Correo electronico</label>
                         <Input
                             id="correo"
@@ -66,20 +70,13 @@
                         />
                     </div>
 
-                    <div class="field">
-                        <label for="telefono">Telefono</label>
-                        <Input
-                            id="telefono"
-                            v-model="profile.telefono"
-                            name="telefono"
-                            placeholder="+34 600 000 000"
-                            inputClass="settings-input"
-                        />
-                    </div>
                 </div>
 
                 <div class="actions-end">
-                    <Botones>Guardar Cambios</Botones>
+                    <Botones :disabled="isLoading || isSaving">
+                        <span v-if="!isSaving">Guardar Cambios</span>
+                        <span v-else class="spinner spinner--small" aria-label="Guardando"></span>
+                    </Botones>
                 </div>
             </form>
         </section>
@@ -87,19 +84,110 @@
 </template>
 
 <script setup lang="ts">
-import { reactive } from 'vue';
+import axios from 'axios';
+import { computed, onMounted, reactive, ref } from 'vue';
 import Botones from '@/components/Botones.vue';
 import Input from '@/components/Input.vue';
 import SettingsLayout from '@/components/settings/SettingsLayout.vue';
+import api from '@/lib/api';
+
+type ProfileResponse = {
+    nombre?: string;
+    apellidos?: string;
+    empresa?: string | null;
+    pais?: string | null;
+    correo?: string;
+};
 
 const profile = reactive({
-    nombre: 'Cliente',
-    apellidos: 'Regular',
+    nombre: '',
+    apellidos: '',
     empresa: '',
     pais: '',
-    correo: 'usuario@simex.com',
-    telefono: '',
+    correo: '',
 });
+
+const isLoading = ref(false);
+const isSaving = ref(false);
+const saveError = ref('');
+const saveSuccess = ref(false);
+
+const defaultCountries = ['Espana', 'Portugal', 'Francia'];
+
+const countryOptions = computed(() => {
+    const set = new Set(defaultCountries);
+    if (profile.pais) {
+        set.add(profile.pais);
+    }
+    return Array.from(set);
+});
+
+const fullName = computed(() => {
+    const name = [profile.nombre, profile.apellidos].filter(Boolean).join(' ').trim();
+    return name || 'Usuario';
+});
+
+const avatarInitials = computed(() => {
+    const first = profile.nombre?.trim().charAt(0) || '';
+    const second = profile.apellidos?.trim().charAt(0) || '';
+    const initials = `${first}${second}`.toUpperCase();
+    return initials || 'U';
+});
+
+const applyProfile = (data: ProfileResponse) => {
+    profile.nombre = data.nombre || '';
+    profile.apellidos = data.apellidos || '';
+    profile.empresa = data.empresa || '';
+    profile.pais = data.pais || '';
+    profile.correo = data.correo || '';
+};
+
+const fetchProfile = async () => {
+    isLoading.value = true;
+    saveError.value = '';
+
+    try {
+        const { data } = await api.get('/user');
+        applyProfile(data);
+    } catch {
+        saveError.value = 'No se pudo cargar la informacion del usuario.';
+    } finally {
+        isLoading.value = false;
+    }
+};
+
+const saveProfile = async () => {
+    isSaving.value = true;
+    saveError.value = '';
+    saveSuccess.value = false;
+
+    try {
+        const { data } = await api.post('/user', {
+            nombre: profile.nombre,
+            apellidos: profile.apellidos,
+            empresa: profile.empresa,
+            pais: profile.pais,
+            correo: profile.correo,
+        });
+
+        applyProfile(data);
+        localStorage.setItem('user_name', [data?.nombre, data?.apellidos].filter(Boolean).join(' ').trim());
+        saveSuccess.value = true;
+    } catch (error) {
+        if (axios.isAxiosError(error)) {
+            saveError.value =
+                (error.response?.data?.message as string) ||
+                (Object.values(error.response?.data?.errors || {}).flat()?.[0] as string) ||
+                'No se pudo guardar el perfil.';
+        } else {
+            saveError.value = 'No se pudo guardar el perfil.';
+        }
+    } finally {
+        isSaving.value = false;
+    }
+};
+
+onMounted(fetchProfile);
 </script>
 
 <style>
@@ -112,6 +200,53 @@ const profile = reactive({
     margin: 6px 0 18px;
     color: #6d7f96;
     font-size: 0.92rem;
+}
+
+.feedback {
+    margin: 6px 0;
+    font-size: 0.9rem;
+}
+
+.feedback.info {
+    color: #334760;
+}
+
+.feedback.success {
+    color: #0f9f71;
+}
+
+.feedback.error {
+    color: #b42318;
+}
+
+.loading-row {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+}
+
+.spinner {
+    width: 22px;
+    height: 22px;
+    border: 3px solid rgba(29, 45, 70, 0.2);
+    border-top-color: #1d2d46;
+    border-radius: 50%;
+    display: inline-block;
+    animation: spin 0.8s linear infinite;
+}
+
+.spinner--small {
+    width: 16px;
+    height: 16px;
+    border-width: 2px;
+    border-color: rgba(255, 255, 255, 0.35);
+    border-top-color: #ffffff;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
 }
 
 .panel-form {
@@ -155,6 +290,10 @@ const profile = reactive({
     gap: 6px;
 }
 
+.field--full {
+    grid-column: span 2;
+}
+
 .field label {
     color: #334760;
     font-size: 0.9rem;
@@ -194,6 +333,10 @@ const profile = reactive({
 @media (max-width: 880px) {
     .grid-two {
         grid-template-columns: 1fr;
+    }
+
+    .field--full {
+        grid-column: auto;
     }
 }
 </style>

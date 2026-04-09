@@ -49,7 +49,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref } from 'vue';
+import { computed, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import logo from '../../../prueba.png';
 import settingsIcon from '../../../public/icons_multimar/icons-simex/compartidos/light_icons/settings-w.svg';
@@ -61,7 +61,7 @@ import ofertaIcon from '../../../public/icons_multimar/icons-simex/compartidos/l
 import api from '@/lib/api';
 
 const usuarioRol = ref(localStorage.getItem('user_rol') || '');
-const usuarioNombre = ref('');
+const usuarioNombre = ref(localStorage.getItem('user_name') || '');
 const router = useRouter();
 
 // Extrae las páginas de la derecha (Ajustes y Notificaciones)
@@ -72,18 +72,6 @@ const paginasDerecha = computed(() => {
     ];
 });
 
-onMounted(async () => {
-    try {
-        const { data } = await api.get('/user');
-
-        const nombre = [data?.nom, data?.cognoms].filter(Boolean).join(' ').trim();
-
-        usuarioNombre.value = nombre || data?.name || data?.correu || '';
-    } catch {
-        usuarioNombre.value = '';
-    }
-});
-
 async function logout() {
     try {
         await api.post('/logout');
@@ -92,6 +80,7 @@ async function logout() {
     } finally {
         localStorage.removeItem('auth_token');
         localStorage.removeItem('user_rol');
+        localStorage.removeItem('user_name');
         usuarioRol.value = '';
         usuarioNombre.value = '';
         await router.push('/login');
