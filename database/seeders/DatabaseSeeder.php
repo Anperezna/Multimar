@@ -23,6 +23,7 @@ use App\Models\Usuari;
 // use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 
 class DatabaseSeeder extends Seeder
 {
@@ -47,7 +48,7 @@ class DatabaseSeeder extends Seeder
         $admin = Usuari::updateOrCreate([
             'correu' => 'admin@multimar.com',
         ], [
-            'contrasenya' => '123123',
+            'contrasenya' => Hash::make('123123'),
             'nom' => 'Admin',
             'cognoms' => 'Admin',
             'rol_id' => $adminRol->id,
@@ -190,7 +191,7 @@ class DatabaseSeeder extends Seeder
         Usuari::updateOrCreate([
             'correu' => 'operador@multimar.com',
         ], [
-            'contrasenya' => '123123',
+            'contrasenya' => Hash::make('123123'),
             'nom' => 'Operador',
             'cognoms' => 'Operador',
             'rol_id' => $operadorRol->id,

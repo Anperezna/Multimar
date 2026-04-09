@@ -116,7 +116,7 @@
                 </div>
             </footer>
         </section>
-    </section>
+        </section>
 </template>
 
 <script setup lang="ts">

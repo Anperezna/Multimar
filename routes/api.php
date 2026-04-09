@@ -14,10 +14,22 @@ use Illuminate\Support\Facades\Route;
 
 
 Route::get('/user', function (Request $request) {
-    return $request->user();
+    $usuari = $request->user();
+
+    if (!$usuari) {
+        return response()->json(['error' => 'No autenticado'], 401);
+    }
+
+    $usuari->load('rol');
+
+    return $usuari;
 })->middleware('auth:sanctum');
 
 Route::post('/login', [AuthentificationController::class, 'login']);
+
+
+
+Route::middleware(['auth:sanctum'])->group(function () {
 
 Route::get('/usuaris', [UsuariController::class, 'index']);
 
@@ -39,3 +51,4 @@ Route::post('/solicitud-oferta', [SolicitudController::class, 'store']);
 
 Route::post('/usuaris', [UsuariController::class, 'store']);
 Route::delete('/usuaris/{usuari}', [UsuariController::class, 'destroy']);
+});

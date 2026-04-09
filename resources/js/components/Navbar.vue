@@ -1,24 +1,33 @@
 <template>
-    <nav class="navbar">
+    <nav v-if="usuarioRol !== ''" class="navbar">
         <div class="navbar__logo"><img :src="logo" alt="Logo" class="logo"></div>
         <div class="navbar__nav-center">
-            <router-link
-                v-for="item in paginasCentro"
-                :key="item.id"
-                :to="item.route"
-                class="navbar__item"
-                custom
-                v-slot="{ navigate, href, isActive }"
-            >
-                <button
-                    :class="['navbar__item', { 'active': isActive }]"
-                    @click="navigate"
-                    :aria-current="isActive ? 'page' : undefined"
-                >
-                    <img :src="item.icon" alt="icons" class="navbar__icon">
-                    {{ item.pagina }}
-                </button>
+            <router-link to="/home" class="navbar__item" active-class="active">
+                <img :src="dashboardIcon" alt="icons" class="navbar__icon">
+                Dashboard
             </router-link>
+
+            <router-link v-if="usuarioRol === 'Admin'" to="/clientes" class="navbar__item" active-class="active">
+                <img :src="usersIcon" alt="icons" class="navbar__icon">
+                Clientes
+            </router-link>
+
+            <router-link v-if="usuarioRol === 'Usuari'" to="/solicitudOferta" class="navbar__item" active-class="active">
+                <img :src="solicitudOfertaIcon" alt="icons" class="navbar__icon">
+                Solicitud Oferta
+            </router-link>
+
+            <template v-if="usuarioRol === 'Operador'">
+                <router-link to="/clientes" class="navbar__item" active-class="active">
+                    <img :src="usersIcon" alt="icons" class="navbar__icon">
+                    Clientes
+                </router-link>
+
+                <router-link to="/ofertas" class="navbar__item" active-class="active">
+                    <img :src="ofertaIcon" alt="icons" class="navbar__icon">
+                    Ofertas
+                </router-link>
+            </template>
         </div>
         <div class="navbar__right">
             <router-link
@@ -44,47 +53,14 @@ import dashboardIcon from '../../../public/icons_multimar/icons-simex/compartido
 import solicitudOfertaIcon from '../../../public/icons_multimar/icons-simex/compartidos/light_icons/solicitud-w.svg';
 import ofertaIcon from '../../../public/icons_multimar/icons-simex/compartidos/light_icons/oferta-w.svg';
 
-// Rutas comunes para todos los roles
-const paginasEnComun = [
-    { id: 1, pagina: 'Dashboard', route: '/home', icon: dashboardIcon },
-    { id: 2, pagina: 'Notificaciones', route: '/notificaciones', icon: notificationIcon },
-    { id: 3, pagina: 'Ajustes', route: '/ajustes', icon: settingsIcon}
-];
-
-// Rutas específicas por rol
-const paginasPorRol = {
-    admin: [
-        { id: 4, pagina: 'Clientes', route: '/clientes', icon: usersIcon}
-    ],
-    usuario: [
-        { id: 5, pagina: 'Solicitud Oferta', route: '/solicitudOferta', icon: solicitudOfertaIcon }
-    ],
-    operador: [
-        { id: 6, pagina: 'Clientes', route: '/clientes', icon: usersIcon },
-        { id: 7, pagina: 'Ofertas', route: '/ofertas', icon: ofertaIcon}
-    ]
-};
-
-// Función para obtener las páginas según el rol
-function obtenerPaginasPorRol(rol) {
-    return [
-        ...paginasEnComun,
-        ...(paginasPorRol[rol] || [])
-    ];
-}
-
-const usuarioRol = ref('operador'); // Cambia dinámicamente según el usuario
-
-const paginas = computed(() => obtenerPaginasPorRol(usuarioRol.value));
+const usuarioRol = ref(localStorage.getItem('user_rol') || '');
 
 // Extrae las páginas de la derecha (Ajustes y Notificaciones)
 const paginasDerecha = computed(() => {
-    return paginas.value.filter(p => p.pagina === 'Ajustes' || p.pagina === 'Notificaciones');
-});
-
-// Páginas del centro (Dashboard y específicas)
-const paginasCentro = computed(() => {
-    return paginas.value.filter(p => p.pagina !== 'Ajustes' && p.pagina !== 'Notificaciones');
+    return [
+        { id: 2, pagina: 'Notificaciones', route: '/notificaciones', icon: notificationIcon },
+        { id: 3, pagina: 'Ajustes', route: '/ajustes', icon: settingsIcon }
+    ];
 });
 </script>
 
@@ -128,8 +104,7 @@ const paginasCentro = computed(() => {
     z-index: 2;
 }
 
-.navbar__settings {
-    cursor: pointer;
+.navbar__settings {    cursor: pointer;
     display: flex;
     align-items: center;
     gap: 6px;
