@@ -38,13 +38,19 @@
                 <button class="navbar__settings">
                     <img v-if="item.icon" :src="item.icon" alt="icon" class="navbar__icon" />
                 </button>
+                
             </router-link>
+            <p v-if="usuarioNombre" class="navbar__username">{{ usuarioNombre }}</p>
+            <button class="navbar__settings" type="button" @click="logout">
+                <img src="../../../public/icons_multimar/icons-simex/compartidos/light_icons/logout-w.svg" alt="" class="navbar__icon">
+            </button>
         </div>
     </nav>
 </template>
 
 <script setup>
-import { computed, ref } from 'vue';
+import { computed, onMounted, ref } from 'vue';
+import { useRouter } from 'vue-router';
 import logo from '../../../prueba.png';
 import settingsIcon from '../../../public/icons_multimar/icons-simex/compartidos/light_icons/settings-w.svg';
 import notificationIcon from '../../../public/icons_multimar/icons-simex/compartidos/light_icons/bell-w.svg';
@@ -52,8 +58,11 @@ import usersIcon from '../../../public/icons_multimar/icons-simex/compartidos/li
 import dashboardIcon from '../../../public/icons_multimar/icons-simex/compartidos/light_icons/dashboard-w.svg';
 import solicitudOfertaIcon from '../../../public/icons_multimar/icons-simex/compartidos/light_icons/solicitud-w.svg';
 import ofertaIcon from '../../../public/icons_multimar/icons-simex/compartidos/light_icons/oferta-w.svg';
+import api from '@/lib/api';
 
 const usuarioRol = ref(localStorage.getItem('user_rol') || '');
+const usuarioNombre = ref('');
+const router = useRouter();
 
 // Extrae las páginas de la derecha (Ajustes y Notificaciones)
 const paginasDerecha = computed(() => {
@@ -62,6 +71,34 @@ const paginasDerecha = computed(() => {
         { id: 3, pagina: 'Ajustes', route: '/ajustes', icon: settingsIcon }
     ];
 });
+
+onMounted(async () => {
+    try {
+        const { data } = await api.get('/user');
+
+        const nombre = [data?.nom, data?.cognoms].filter(Boolean).join(' ').trim();
+
+        usuarioNombre.value = nombre || data?.name || data?.correu || '';
+    } catch {
+        usuarioNombre.value = '';
+    }
+});
+
+async function logout() {
+    try {
+        await api.post('/logout');
+    } catch {
+        // Clear local session even if API logout fails.
+    } finally {
+        localStorage.removeItem('auth_token');
+        localStorage.removeItem('user_rol');
+        usuarioRol.value = '';
+        usuarioNombre.value = '';
+        await router.push('/login');
+    }
+}
+
+
 </script>
 
 <style scoped>
@@ -128,5 +165,11 @@ const paginasDerecha = computed(() => {
     height: 20px;
     object-fit: contain;
     margin-right: 2px;
+}
+
+.navbar__username {
+    margin: 0;
+    font-size: 0.9rem;
+    white-space: nowrap;
 }
 </style>
