@@ -25,6 +25,17 @@ class AuthentificationController extends Controller
 
     }
 
+    public function logout(Request $request)
+    {
+        $user = $request->user();
+
+        if ($user && $user->currentAccessToken()) {
+            $user->currentAccessToken()->delete();
+        }
+
+        return response()->json(['message' => 'Sesion cerrada'], 200);
+    }
+
     /**
      * Store a newly created resource in storage.
      */

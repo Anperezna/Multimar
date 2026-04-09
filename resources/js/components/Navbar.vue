@@ -38,14 +38,19 @@
                 <button class="navbar__settings">
                     <img v-if="item.icon" :src="item.icon" alt="icon" class="navbar__icon" />
                 </button>
+                
             </router-link>
             <p v-if="usuarioNombre" class="navbar__username">{{ usuarioNombre }}</p>
+            <button class="navbar__settings" type="button" @click="logout">
+                <img src="../../../public/icons_multimar/icons-simex/compartidos/light_icons/logout-w.svg" alt="" class="navbar__icon">
+            </button>
         </div>
     </nav>
 </template>
 
 <script setup>
 import { computed, onMounted, ref } from 'vue';
+import { useRouter } from 'vue-router';
 import logo from '../../../prueba.png';
 import settingsIcon from '../../../public/icons_multimar/icons-simex/compartidos/light_icons/settings-w.svg';
 import notificationIcon from '../../../public/icons_multimar/icons-simex/compartidos/light_icons/bell-w.svg';
@@ -57,6 +62,7 @@ import api from '@/lib/api';
 
 const usuarioRol = ref(localStorage.getItem('user_rol') || '');
 const usuarioNombre = ref('');
+const router = useRouter();
 
 // Extrae las páginas de la derecha (Ajustes y Notificaciones)
 const paginasDerecha = computed(() => {
@@ -77,6 +83,20 @@ onMounted(async () => {
         usuarioNombre.value = '';
     }
 });
+
+async function logout() {
+    try {
+        await api.post('/logout');
+    } catch {
+        // Clear local session even if API logout fails.
+    } finally {
+        localStorage.removeItem('auth_token');
+        localStorage.removeItem('user_rol');
+        usuarioRol.value = '';
+        usuarioNombre.value = '';
+        await router.push('/login');
+    }
+}
 
 
 </script>
