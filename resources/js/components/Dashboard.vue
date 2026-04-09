@@ -44,7 +44,12 @@
             </div>
 
             <div class="table-wrap">
-                <table>
+                <div v-if="isLoading" class="table-loading">
+                    <span class="table-loading__spinner" aria-label="Cargando envios"></span>
+                    <p>Cargando envios...</p>
+                </div>
+
+                <table v-else>
                     <thead>
                         <tr>
                             <th>ID</th>
@@ -163,6 +168,7 @@ const pageSize = 8;
 const router = useRouter();
 const ofertas = ref<OfertaApi[]>([]);
 const apiError = ref('');
+const isLoading = ref(false);
 
 const toneFromStatus = (status?: string | null): StatusTone => {
     const value = (status || '').toLowerCase();
@@ -252,6 +258,7 @@ const summaryCards = computed<SummaryCard[]>(() => {
 
 const fetchBackendData = async () => {
     apiError.value = '';
+    isLoading.value = true;
 
     try {
         const { data } = await api.get('/ofertes');
@@ -259,6 +266,8 @@ const fetchBackendData = async () => {
     } catch (error) {
         apiError.value = 'No se pudieron cargar las ofertas desde backend.';
         console.error('Error Axios:', error);
+    } finally {
+        isLoading.value = false;
     }
 };
 
@@ -480,6 +489,25 @@ watch(search, () => {
     overflow-x: auto;
 }
 
+.table-loading {
+    min-height: 220px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    color: var(--text-soft);
+
+    &__spinner {
+        width: 34px;
+        height: 34px;
+        border: 3px solid #d7e3f2;
+        border-top-color: #3b82f6;
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+    }
+}
+
 table {
     width: 100%;
     border-collapse: collapse;
@@ -537,6 +565,12 @@ table {
 .pagination {
     display: flex;
     gap: 8px;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
 }
 
 @media (max-width: 1080px) {

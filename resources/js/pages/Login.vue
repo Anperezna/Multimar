@@ -26,7 +26,10 @@
                     inputClass="login-input"
                 />
 
-                <Botones class="login-button">Iniciar Sesion</Botones>
+                <Botones class="login-button" :disabled="isLoading">
+                    <span v-if="!isLoading">Iniciar Sesion</span>
+                    <span v-else class="spinner-inline" aria-label="Cargando"></span>
+                </Botones>
                 <small v-if="errorMsg" class="login-error">{{ errorMsg }}</small>
             </form>
         </div>
@@ -44,10 +47,12 @@ import api from '@/lib/api';
 const email = ref('');
 const password = ref('');
 const errorMsg = ref('');
+const isLoading = ref(false);
 const router = useRouter();
 
 const submitLogin = async () => {
     errorMsg.value = '';
+    isLoading.value = true;
 
     try {
         const { data } = await api.post('/login', {
@@ -71,6 +76,8 @@ const submitLogin = async () => {
         }
 
         errorMsg.value = 'Credenciales inválidas';
+    } finally {
+        isLoading.value = false;
     }
 };
 </script>
@@ -165,5 +172,21 @@ const submitLogin = async () => {
     margin-top: 4px;
     color: #b42318;
     font-size: 0.84rem;
+}
+
+.spinner-inline {
+    width: 18px;
+    height: 18px;
+    border: 2px solid rgba(255, 255, 255, 0.35);
+    border-top-color: #ffffff;
+    border-radius: 50%;
+    display: inline-block;
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
 }
 </style>
