@@ -79,8 +79,30 @@ const syncUserRoleInBackground = () => {
 
     api.get('/user')
         .then(({ data }) => {
-            if (data?.rol?.rol) {
-                localStorage.setItem('user_rol', data.rol.rol);
+            const resolvedRole =
+                typeof data?.rol === 'string'
+                    ? data.rol
+                    : data?.rol?.rol || '';
+            const resolvedName =
+                [data?.nombre ?? data?.nom, data?.apellidos ?? data?.cognoms]
+                    .filter(Boolean)
+                    .join(' ')
+                    .trim() ||
+                data?.name ||
+                data?.correo ||
+                data?.correu ||
+                '';
+
+            if (resolvedRole) {
+                localStorage.setItem('user_rol', resolvedRole);
+            }
+
+            if (resolvedName) {
+                localStorage.setItem('user_name', resolvedName);
+            }
+
+            if (resolvedRole || resolvedName) {
+                window.dispatchEvent(new Event('auth-updated'));
             }
         })
         .catch(() => {
@@ -99,39 +121,6 @@ router.beforeEach((to) => {
     const token = localStorage.getItem('auth_token');
 
     if (!token) {
-        return '/login';
-    }
-
-    try {
-        const { data } = await api.get('/user');
-        const resolvedRole =
-            typeof data?.rol === 'string'
-                ? data.rol
-                : data?.rol?.rol;
-        const resolvedName =
-            [data?.nombre ?? data?.nom, data?.apellidos ?? data?.cognoms]
-                .filter(Boolean)
-                .join(' ')
-                .trim() ||
-            data?.name ||
-            data?.correo ||
-            data?.correu ||
-            '';
-
-        if (resolvedRole) {
-            localStorage.setItem('user_rol', resolvedRole);
-            localStorage.setItem('user_name', resolvedName);
-            return true;
-        }
-
-        localStorage.removeItem('auth_token');
-        localStorage.removeItem('user_rol');
-        localStorage.removeItem('user_name');
-        return '/login';
-    } catch (error) {
-        localStorage.removeItem('auth_token');
-        localStorage.removeItem('user_rol');
-        localStorage.removeItem('user_name');
         return '/login';
     }
 
