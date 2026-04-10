@@ -68,8 +68,52 @@ const router = createRouter({
 });
 
 const publicPaths = ['/', '/login'];
+let syncingUserRole = false;
 
-router.beforeEach(async (to) => {
+const syncUserRoleInBackground = () => {
+    if (syncingUserRole) {
+        return;
+    }
+
+    syncingUserRole = true;
+
+    api.get('/user')
+        .then(({ data }) => {
+            const resolvedRole =
+                typeof data?.rol === 'string'
+                    ? data.rol
+                    : data?.rol?.rol || '';
+            const resolvedName =
+                [data?.nombre ?? data?.nom, data?.apellidos ?? data?.cognoms]
+                    .filter(Boolean)
+                    .join(' ')
+                    .trim() ||
+                data?.name ||
+                data?.correo ||
+                data?.correu ||
+                '';
+
+            if (resolvedRole) {
+                localStorage.setItem('user_rol', resolvedRole);
+            }
+
+            if (resolvedName) {
+                localStorage.setItem('user_name', resolvedName);
+            }
+
+            if (resolvedRole || resolvedName) {
+                window.dispatchEvent(new Event('auth-updated'));
+            }
+        })
+        .catch(() => {
+            // Do not interrupt navigation if background sync fails.
+        })
+        .finally(() => {
+            syncingUserRole = false;
+        });
+};
+
+router.beforeEach((to) => {
     if (publicPaths.includes(to.path)) {
         return true;
     }
@@ -80,38 +124,11 @@ router.beforeEach(async (to) => {
         return '/login';
     }
 
-    try {
-        const { data } = await api.get('/user');
-        const resolvedRole =
-            typeof data?.rol === 'string'
-                ? data.rol
-                : data?.rol?.rol;
-        const resolvedName =
-            [data?.nombre ?? data?.nom, data?.apellidos ?? data?.cognoms]
-                .filter(Boolean)
-                .join(' ')
-                .trim() ||
-            data?.name ||
-            data?.correo ||
-            data?.correu ||
-            '';
-
-        if (resolvedRole) {
-            localStorage.setItem('user_rol', resolvedRole);
-            localStorage.setItem('user_name', resolvedName);
-            return true;
-        }
-
-        localStorage.removeItem('auth_token');
-        localStorage.removeItem('user_rol');
-        localStorage.removeItem('user_name');
-        return '/login';
-    } catch (error) {
-        localStorage.removeItem('auth_token');
-        localStorage.removeItem('user_rol');
-        localStorage.removeItem('user_name');
-        return '/login';
+    if (!localStorage.getItem('user_rol')) {
+        syncUserRoleInBackground();
     }
+
+    return true;
 });
 
 export default router;
