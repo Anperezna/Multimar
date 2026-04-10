@@ -48,7 +48,7 @@ COPY docker/php/local.ini /usr/local/etc/php/conf.d/local.ini
 COPY docker/php/entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
 
-EXPOSE 8000
+EXPOSE 3000
 
 ENTRYPOINT ["entrypoint.sh"]
-CMD ["php", "artisan", "serve", "--host=0.0.0.0", "--port=8000"]
+CMD ["sh", "-c", "echo 'App disponible en http://localhost:3000' && php artisan serve --host=0.0.0.0 --port=3000"]
