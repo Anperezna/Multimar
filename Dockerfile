@@ -51,4 +51,4 @@ RUN chmod +x /usr/local/bin/entrypoint.sh
 EXPOSE 3000
 
 ENTRYPOINT ["entrypoint.sh"]
-CMD ["sh", "-c", "echo 'App disponible en http://localhost:3000' && php artisan serve --host=0.0.0.0 --port=3000"]
+CMD ["sh", "-c", "echo '<---- App disponible en http://localhost:3000 ---->' && php artisan serve --host=0.0.0.0 --port=3000"]
