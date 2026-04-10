@@ -2,11 +2,28 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\EstatOferta;
 use App\Models\Oferta;
 use Illuminate\Http\Request;
 
 class OfertaController extends Controller
 {
+    private function resolveOfertaStatus($oferta): string
+    {
+        $isCanceled = (int) ($oferta->cancelat ?? 0) === 1;
+        $isAccepted = (int) ($oferta->acceptat ?? 0) === 1;
+
+        if ($isCanceled) {
+            return 'Cancelada';
+        }
+
+        if ($isAccepted) {
+            return 'Acceptada';
+        }
+
+        return trim((string) ($oferta->estat_oferta_nom ?? 'Nova'));
+    }
+
     private function ofertaQuery()
     {
         return Oferta::query()
@@ -61,7 +78,7 @@ class OfertaController extends Controller
             'kind' => 'Oferta',
             'description' => trim((string) ($oferta->comentaris ?? '')),
             'operation' => trim((string) ($oferta->operacio_nom ?? '')),
-            'status' => trim((string) ($oferta->estat_oferta_nom ?? '')),
+            'status' => $this->resolveOfertaStatus($oferta),
             'carrier' => trim((string) ($oferta->transportista_origen_nom ?? '')),
             'lastUpdate' => $oferta->etd ?: $oferta->eta ?: $oferta->data_creacio,
             'mercanciaNombre' => trim((string) ($oferta->mercancia_nombre ?? '')),
@@ -138,5 +155,56 @@ class OfertaController extends Controller
         $oferta->delete();
 
         return response()->noContent();
+    }
+
+    public function accept(Oferta $oferta)
+    {
+        $estatAcceptada = EstatOferta::query()->firstOrCreate([
+            'estat' => 'Acceptada',
+        ]);
+
+        $oferta->acceptat = 1;
+        $oferta->cancelat = 0;
+        $oferta->acabat = $oferta->acabat ?? 0;
+        $oferta->estat_oferta_id = $estatAcceptada->id;
+        $oferta->save();
+
+        $ofertaActualitzada = $this->ofertaQuery()
+            ->where('ofertes.id', $oferta->id)
+            ->first();
+
+        if (! $ofertaActualitzada) {
+            return response()->json([
+                'message' => 'Oferta aceptada correctamente',
+                'id' => $oferta->id,
+            ]);
+        }
+
+        return response()->json($this->toFrontendOferta($ofertaActualitzada));
+    }
+
+    public function cancel(Oferta $oferta)
+    {
+        $estatCancelada = EstatOferta::query()->firstOrCreate([
+            'estat' => 'Cancelada',
+        ]);
+
+        $oferta->cancelat = 1;
+        $oferta->acceptat = 0;
+        $oferta->estat_oferta_id = $estatCancelada->id;
+        $oferta->save();
+
+        $ofertaActualitzada = $this->ofertaQuery()
+            ->where('ofertes.id', $oferta->id)
+            ->first();
+
+        if (! $ofertaActualitzada) {
+            return response()->json([
+                'message' => 'Oferta cancelada correctamente',
+                'id' => $oferta->id,
+            ]);
+        }
+
+        return response()->json($this->toFrontendOferta($ofertaActualitzada));
     }
 }

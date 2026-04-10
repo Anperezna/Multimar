@@ -57,7 +57,7 @@
                                     <button
                                         type="button"
                                         class="detail-btn"
-                                        @click="router.push({ name: 'detalle-oferta', params: { id: oferta.id } })"
+                                        @click="router.push(`/ofertas/${oferta.id}`)"
                                     >
                                         Ver
                                     </button>

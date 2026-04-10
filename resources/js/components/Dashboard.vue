@@ -87,11 +87,10 @@
                                 <button
                                     type="button"
                                     class="detail-btn"
-                                    :disabled="shipment.kind === 'Solicitud'"
-                                    :aria-label="shipment.kind === 'Solicitud' ? 'Sin detalle disponible' : 'Ver detalles del envio'"
-                                    @click="shipment.kind === 'Oferta' && router.push({ name: 'detalle-oferta', params: { id: shipment.id } })"
+                                    :aria-label="shipment.kind === 'Solicitud' ? 'Ver solicitud y decidir accion' : 'Ver detalles del envio'"
+                                    @click="openShipmentDetail(shipment)"
                                 >
-                                    {{ shipment.kind === 'Oferta' ? 'Ver' : 'Sin detalle' }}
+                                    Ver
                                 </button>
                             </td>
                         </tr>
@@ -189,6 +188,16 @@ const toneFromStatus = (status?: string | null): StatusTone => {
     return 'info';
 };
 
+const normalizeStatusLabel = (status?: string | null): string => {
+    const value = (status || '').toLowerCase();
+
+    if (value.includes('accept')) return 'Aceptado';
+    if (value.includes('cancel')) return 'Cancelado';
+    if (value.includes('pend')) return 'Pendiente';
+
+    return (status || '').trim() || 'Sin estado';
+};
+
 const shipments = computed<ShipmentRow[]>(() => {
     return ofertas.value.map((oferta) => {
         return {
@@ -199,7 +208,7 @@ const shipments = computed<ShipmentRow[]>(() => {
             kindTone: oferta.kind === 'Solicitud' ? 'warning' : 'info',
             description: oferta.description,
             operation: oferta.operation,
-            status: oferta.status,
+            status: normalizeStatusLabel(oferta.status),
             statusTone: toneFromStatus(oferta.status),
             carrier: oferta.carrier,
             lastUpdate: oferta.lastUpdate || '-',
@@ -290,6 +299,10 @@ const fetchBackendData = async () => {
     } finally {
         isLoading.value = false;
     }
+};
+
+const openShipmentDetail = async (shipment: ShipmentRow) => {
+    await router.push(`/ofertas/${shipment.id}`);
 };
 
 onMounted(fetchBackendData);
