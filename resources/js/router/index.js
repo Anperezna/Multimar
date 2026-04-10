@@ -63,8 +63,30 @@ const router = createRouter({
 });
 
 const publicPaths = ['/', '/login'];
+let syncingUserRole = false;
 
-router.beforeEach(async (to) => {
+const syncUserRoleInBackground = () => {
+    if (syncingUserRole) {
+        return;
+    }
+
+    syncingUserRole = true;
+
+    api.get('/user')
+        .then(({ data }) => {
+            if (data?.rol?.rol) {
+                localStorage.setItem('user_rol', data.rol.rol);
+            }
+        })
+        .catch(() => {
+            // Do not interrupt navigation if background sync fails.
+        })
+        .finally(() => {
+            syncingUserRole = false;
+        });
+};
+
+router.beforeEach((to) => {
     if (publicPaths.includes(to.path)) {
         return true;
     }
@@ -72,25 +94,15 @@ router.beforeEach(async (to) => {
     const token = localStorage.getItem('auth_token');
 
     if (!token) {
-        return '/login';
-    }
-
-    try {
-        const { data } = await api.get('/user');
-
-        if (data && data.rol && data.rol.rol) {
-            localStorage.setItem('user_rol', data.rol.rol);
-            return true;
-        }
-
-        localStorage.removeItem('auth_token');
-        localStorage.removeItem('user_rol');
-        return '/login';
-    } catch (error) {
-        localStorage.removeItem('auth_token');
         localStorage.removeItem('user_rol');
         return '/login';
     }
+
+    if (!localStorage.getItem('user_rol')) {
+        syncUserRoleInBackground();
+    }
+
+    return true;
 });
 
 export default router;
