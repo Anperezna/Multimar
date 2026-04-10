@@ -28,6 +28,8 @@ Route::get('/ciutats', [CiutatController::class, 'index']);
 Route::get('/incoterms', [IncotermController::class, 'index']);
 Route::get('/ofertes', [OfertaController::class, 'index']);
 Route::get('/ofertes/{id}', [OfertaController::class, 'show']);
+Route::post('/ofertes/{oferta}/accept', [OfertaController::class, 'accept']);
+Route::post('/ofertes/{oferta}/cancel', [OfertaController::class, 'cancel']);
 Route::put('/ofertes/{oferta}', [OfertaController::class, 'update']);
 Route::delete('/ofertes/{oferta}', [OfertaController::class, 'destroy']);
 Route::get('/solicitudes', [SolicitudController::class, 'index']);

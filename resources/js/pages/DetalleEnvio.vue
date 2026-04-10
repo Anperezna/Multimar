@@ -19,7 +19,7 @@
                 <button type="button" class="btn">QR</button>
                 <button type="button" class="btn">Descargar Documentos</button>
                 <button type="button" class="btn btn--danger" :disabled="isDeleting || isAccepting" @click="deleteOferta">
-                    {{ isDeleting ? 'Eliminando...' : 'Eliminar oferta' }}
+                    {{ isDeleting ? 'Cancelando...' : 'Cancelar oferta' }}
                 </button>
                 <button type="button" class="btn btn--success" :disabled="isDeleting || isAccepting" @click="acceptOferta">
                     {{ isAccepting ? 'Aceptando...' : 'Aceptar oferta' }}
@@ -163,16 +163,25 @@ type OfertaDetalleApi = {
 const route = useRoute();
 const router = useRouter();
 const oferta = ref<OfertaDetalleApi | null>(null);
+const entityKind = ref<'Oferta' | 'Solicitud'>('Oferta');
 const isAccepting = ref(false);
 const isDeleting = ref(false);
 
 const loadOferta = async () => {
+    const id = Number(route.params.id);
+
     try {
-        const id = Number(route.params.id);
-        const { data } = await api.get(`/ofertes/${id}`);
-        oferta.value = data;
+        const { data: ofertaData } = await api.get(`/ofertes/${id}`);
+        oferta.value = ofertaData;
+        entityKind.value = 'Oferta';
     } catch (error) {
-        console.error('Error cargando detalle de oferta:', error);
+        try {
+            const { data: solicitudData } = await api.get(`/solicitudes/${id}`);
+            oferta.value = solicitudData;
+            entityKind.value = 'Solicitud';
+        } catch (fallbackError) {
+            console.error('Error cargando detalle de envio:', fallbackError);
+        }
     }
 };
 
@@ -211,8 +220,18 @@ const acceptOferta = async () => {
     isAccepting.value = true;
 
     try {
-        await api.post(`/ofertes/${id}/accept`);
-        await loadOferta();
+        if (entityKind.value === 'Solicitud') {
+            const { data } = await api.post(`/solicitudes/${id}/accept`);
+            const ofertaId = Number(data?.oferta_id);
+
+            if (Number.isFinite(ofertaId)) {
+                await api.post(`/ofertes/${ofertaId}/accept`);
+            }
+        } else {
+            await api.post(`/ofertes/${id}/accept`);
+        }
+
+        await router.push('/home');
     } catch (error) {
         console.error('Error aceptando oferta:', error);
     } finally {
@@ -225,7 +244,7 @@ const deleteOferta = async () => {
 
     if (!id || isAccepting.value || isDeleting.value) return;
 
-    const confirmed = window.confirm('¿Eliminar esta oferta?');
+    const confirmed = window.confirm('¿Cancelar esta oferta?');
 
     if (!confirmed) {
         return;
@@ -234,8 +253,18 @@ const deleteOferta = async () => {
     isDeleting.value = true;
 
     try {
-        await api.delete(`/ofertes/${id}`);
-        router.push('/ofertas');
+        if (entityKind.value === 'Solicitud') {
+            const { data } = await api.post(`/solicitudes/${id}/accept`);
+            const ofertaId = Number(data?.oferta_id);
+
+            if (Number.isFinite(ofertaId)) {
+                await api.post(`/ofertes/${ofertaId}/cancel`);
+            }
+        } else {
+            await api.post(`/ofertes/${id}/cancel`);
+        }
+
+        await router.push('/home');
     } catch (error) {
         console.error('Error eliminando oferta:', error);
     } finally {
