@@ -182,7 +182,7 @@ const isLoading = ref(false);
 
 const toneFromStatus = (status?: string | null): StatusTone => {
     const value = (status || '').toLowerCase();
-    if (value.includes('complet') || value.includes('accept')) return 'success';
+    if (value.includes('complet') || value.includes('accept') || value.includes('acept')) return 'success';
     if (value.includes('cancel') || value.includes('rebuig')) return 'danger';
     if (value.includes('pend') || value.includes('revis')) return 'warning';
     return 'info';
@@ -191,8 +191,8 @@ const toneFromStatus = (status?: string | null): StatusTone => {
 const normalizeStatusLabel = (status?: string | null): string => {
     const value = (status || '').toLowerCase();
 
-    if (value.includes('accept')) return 'Aceptado';
-    if (value.includes('cancel')) return 'Cancelado';
+    if (value.includes('accept') || value.includes('acept')) return 'Aceptada';
+    if (value.includes('cancel')) return 'Cancelada';
     if (value.includes('pend')) return 'Pendiente';
 
     return (status || '').trim() || 'Sin estado';
@@ -239,7 +239,10 @@ const paginatedShipments = computed(() => {
 
 const summaryCards = computed<SummaryCard[]>(() => {
     const total = shipments.value.length;
-    const accepted = shipments.value.filter((item) => item.status.toLowerCase().includes('accept')).length;
+    const accepted = shipments.value.filter((item) => {
+        const value = item.status.toLowerCase();
+        return value.includes('accept') || value.includes('acept');
+    }).length;
     const completed = shipments.value.filter((item) => item.status.toLowerCase().includes('complet')).length;
     const pending = shipments.value.filter((item) => item.status.toLowerCase().includes('pend')).length;
 
@@ -302,7 +305,10 @@ const fetchBackendData = async () => {
 };
 
 const openShipmentDetail = async (shipment: ShipmentRow) => {
-    await router.push(`/ofertas/${shipment.id}`);
+    await router.push({
+        path: `/ofertas/${shipment.id}`,
+        query: { kind: shipment.kind },
+    });
 };
 
 onMounted(fetchBackendData);

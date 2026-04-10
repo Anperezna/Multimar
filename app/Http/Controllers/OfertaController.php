@@ -3,7 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\EstatOferta;
+use App\Models\Notificacion;
 use App\Models\Oferta;
+use App\Models\Solicitud;
 use Illuminate\Http\Request;
 
 class OfertaController extends Controller
@@ -18,7 +20,7 @@ class OfertaController extends Controller
         }
 
         if ($isAccepted) {
-            return 'Acceptada';
+            return 'Aceptada';
         }
 
         return trim((string) ($oferta->estat_oferta_nom ?? 'Nova'));
@@ -169,6 +171,22 @@ class OfertaController extends Controller
         $oferta->estat_oferta_id = $estatAcceptada->id;
         $oferta->save();
 
+        $recipientId = (int) ($oferta->operador_id ?? 0);
+        if ($recipientId <= 0) {
+            $solicitud = Solicitud::query()->where('id', $oferta->solicitud_id)->first();
+            $recipientId = (int) ($solicitud->operador_id ?? 0);
+        }
+
+        if ($recipientId > 0) {
+            $notificacion = new Notificacion();
+            $notificacion->id = (int) (Notificacion::max('id') ?? 0) + 1;
+            $notificacion->usuari_id = $recipientId;
+            $notificacion->titulo = 'Oferta Aceptada';
+            $notificacion->descripcion = 'La oferta #' . $oferta->id . ' ha sido aceptada';
+            $notificacion->visto = 0;
+            $notificacion->save();
+        }
+
         $ofertaActualitzada = $this->ofertaQuery()
             ->where('ofertes.id', $oferta->id)
             ->first();
@@ -193,6 +211,22 @@ class OfertaController extends Controller
         $oferta->acceptat = 0;
         $oferta->estat_oferta_id = $estatCancelada->id;
         $oferta->save();
+
+        $recipientId = (int) ($oferta->operador_id ?? 0);
+        if ($recipientId <= 0) {
+            $solicitud = Solicitud::query()->where('id', $oferta->solicitud_id)->first();
+            $recipientId = (int) ($solicitud->operador_id ?? 0);
+        }
+
+        if ($recipientId > 0) {
+            $notificacion = new Notificacion();
+            $notificacion->id = (int) (Notificacion::max('id') ?? 0) + 1;
+            $notificacion->usuari_id = $recipientId;
+            $notificacion->titulo = 'Oferta Cancelada';
+            $notificacion->descripcion = 'La oferta #' . $oferta->id . ' ha sido cancelada';
+            $notificacion->visto = 0;
+            $notificacion->save();
+        }
 
         $ofertaActualitzada = $this->ofertaQuery()
             ->where('ofertes.id', $oferta->id)

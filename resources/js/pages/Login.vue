@@ -64,6 +64,21 @@ const submitLogin = async () => {
             localStorage.setItem('auth_token', data.token);
         }
 
+        if (data?.rol) {
+            localStorage.setItem('user_rol', data.rol);
+        }
+
+        let nombreCompleto = '';
+        if (data?.nombre) {
+            nombreCompleto = data.nombre;
+        }
+        if (data?.apellidos) {
+            nombreCompleto = nombreCompleto + ' ' + data.apellidos;
+        }
+        if (nombreCompleto) {
+            localStorage.setItem('user_name', nombreCompleto.trim());
+        }
+
         await router.push('/home');
     } catch (error) {
         if (axios.isAxiosError(error)) {

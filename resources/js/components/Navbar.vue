@@ -30,15 +30,14 @@
             </template>
         </div>
         <div class="navbar__right">
+            <NotificationsPopup />
             <router-link
-                v-for="item in paginasDerecha"
-                :key="item.id"
-                :to="item.route"
+                to="/ajustes"
+                class="navbar__item"
             >
                 <button class="navbar__settings">
-                    <img v-if="item.icon" :src="item.icon" alt="icon" class="navbar__icon" />
+                    <img :src="settingsIcon" alt="icon" class="navbar__icon" />
                 </button>
-                
             </router-link>
             <p v-if="usuarioNombre" class="navbar__username">{{ usuarioNombre }}</p>
             <button class="navbar__settings" type="button" @click="logout">
@@ -51,6 +50,7 @@
 <script setup>
 import { computed, ref } from 'vue';
 import { useRouter } from 'vue-router';
+import NotificationsPopup from './NotificationsPopup.vue';
 import logo from '../../../prueba.png';
 import settingsIcon from '../../../public/icons_multimar/icons-simex/compartidos/light_icons/settings-w.svg';
 import notificationIcon from '../../../public/icons_multimar/icons-simex/compartidos/light_icons/bell-w.svg';
@@ -63,14 +63,6 @@ import api from '@/lib/api';
 const usuarioRol = ref(localStorage.getItem('user_rol') || '');
 const usuarioNombre = ref(localStorage.getItem('user_name') || '');
 const router = useRouter();
-
-// Extrae las páginas de la derecha (Ajustes y Notificaciones)
-const paginasDerecha = computed(() => {
-    return [
-        { id: 2, pagina: 'Notificaciones', route: '/notificaciones', icon: notificationIcon },
-        { id: 3, pagina: 'Ajustes', route: '/ajustes', icon: settingsIcon }
-    ];
-});
 
 async function logout() {
     try {

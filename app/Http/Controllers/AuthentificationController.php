@@ -15,14 +15,23 @@ class AuthentificationController extends Controller
     {
         $usuari = Usuari::query()->where('correu', $request->input('correu'))->first();
 
-        if($usuari && Hash::check($request->input('password'), $usuari->contrasenya)) {
+        if ($usuari && Hash::check($request->input('password'), $usuari->contrasenya)) {
+            $usuari->load(['rol', 'pais']);
             $token = $usuari->createToken('auth_token')->plainTextToken;
-            return response()->json(['token' => $token], 200);
-        
-            } else {
+            
+            return response()->json([
+                'token' => $token,
+                'id' => $usuari->id,
+                'nombre' => $usuari->nom,
+                'apellidos' => $usuari->cognoms,
+                'correo' => $usuari->correu,
+                'rol' => $usuari->rol?->rol,
+                'empresa' => $usuari->empresa,
+                'pais' => $usuari->pais?->nom,
+            ], 200);
+        } else {
             return response()->json(['error' => 'Credenciales inválidas'], 401);
         }
-
     }
 
     public function logout(Request $request)

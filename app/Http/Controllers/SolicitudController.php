@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\EstatOferta;
 use App\Models\LiniaTransportMaritim;
+use App\Models\Notificacion;
 use App\Models\Oferta;
 use App\Models\Port;
 use App\Models\Solicitud;
@@ -59,7 +60,7 @@ class SolicitudController extends Controller
             'operation' => trim((string) ($solicitud->operacio_nom ?? '')),
             'status' => 'Pendiente',
             'carrier' => '-',
-            'lastUpdate' => $solicitud->id ? (string) $solicitud->id : '-',
+            'lastUpdate' => '-',
             'mercanciaNombre' => trim((string) ($solicitud->mercancia_nombre ?? '')),
             'pesoBrut' => $solicitud->pes_brut,
             'volum' => $solicitud->volum,
@@ -105,7 +106,7 @@ class SolicitudController extends Controller
         $crearSolicitud->mercancia_nombre = $request->input('nombreMercancia', 'Sin especificar');
         $crearSolicitud->pes_brut = (float) $request->input('pesoBruto', 0);
         $crearSolicitud->volum = (float) $request->input('volumen', 0);
-        $crearSolicitud->client_id = $request->integer('client_id', 1);
+        $crearSolicitud->client_id = $request->user()->id;
         $crearSolicitud->operador_id = $request->integer('operador', 1);
         $crearSolicitud->mercancia_tipus = $request->integer('tipoMercancia', 1);
         $crearSolicitud->tipus_transport_id = $request->integer('tipus_transport_id', 1);
@@ -117,6 +118,14 @@ class SolicitudController extends Controller
         $crearSolicitud->tipus_carrega_id = $request->integer('tipoCarrega', 1);
         
         $crearSolicitud->save();
+
+        $notificacion = new Notificacion();
+        $notificacion->id = (int) (Notificacion::max('id') ?? 0) + 1;
+        $notificacion->usuari_id = $crearSolicitud->operador_id;
+        $notificacion->titulo = 'Nueva Solicitud de Pedido';
+        $notificacion->descripcion = 'Se ha creado una solicitud: ' . $crearSolicitud->mercancia_nombre;
+        $notificacion->visto = 0;
+        $notificacion->save();
 
         return response()->json(['message' => 'Solicitud creada exitosamente'], 201);
     }
@@ -203,6 +212,14 @@ class SolicitudController extends Controller
         $oferta->acabat = 0;
         $oferta->cancelat = 0;
         $oferta->save();
+
+        $notificacion = new Notificacion();
+        $notificacion->id = (int) (Notificacion::max('id') ?? 0) + 1;
+        $notificacion->usuari_id = $solicitud->operador_id;
+        $notificacion->titulo = 'Solicitud Convertida en Oferta';
+        $notificacion->descripcion = 'La solicitud ha sido aceptada y convertida en oferta';
+        $notificacion->visto = 0;
+        $notificacion->save();
 
         $solicitud->delete();
 

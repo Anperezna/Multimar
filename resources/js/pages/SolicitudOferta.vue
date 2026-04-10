@@ -136,8 +136,8 @@
 </template>
 
 <script setup>
-import { ref } from 'vue';
-import axios from 'axios';
+import { ref, onMounted } from 'vue';
+import api from '@/lib/api';
 import Desplegable from '@/components/Desplegable.vue';
 import Input from '@/components/Input.vue';
 import Navbar from '@/components/Navbar.vue';
@@ -171,43 +171,76 @@ const formData = ref({
 const isSubmitting = ref(false);
 const statusMessage = ref('');
 
-const ciudadesData = await axios.get('/api/ciutats');
-const ciutats = ref(ciudadesData.data.map(item => ({
-    value: item.id,
-    label: item.nom
-})));
+// Inicializar como arrays vacíos
+const ciutats = ref([]);
+const tiposCarga = ref([]);
+const tiposContenedor = ref([]);
+const incoterms = ref([]);
+const operadoresLogisticos = ref([]);
 
-const tiposCargaData = await axios.get('/api/tipos-carga');
-const tiposCarga = ref(tiposCargaData.data.map(item => ({
-  value: item.id,
-  label: item.tipus
-})));   
+// Cargar datos cuando el componente monta
+onMounted(async () => {
+    try {
+        const ciudadesData = await api.get('/ciutats');
+        ciutats.value = ciudadesData.data.map(item => ({
+            value: item.id,
+            label: item.nom
+        }));
+    } catch (error) {
+        console.error('Error loading ciudats:', error);
+    }
 
-// Forma más limpia y funcional
-const tiposContenedorData = await axios.get('/api/tipos-contenedor');
-const tiposContenedor = ref(tiposContenedorData.data.map(item => ({
-  value: item.id,
-  label: item.tipus
-}))); 
+    try {
+        const tiposCargaData = await api.get('/tipos-carga');
+        tiposCarga.value = tiposCargaData.data.map(item => ({
+            value: item.id,
+            label: item.tipus
+        }));
+    } catch (error) {
+        console.error('Error loading tipos carga:', error);
+    }
 
-const incotermsData = await axios.get('/api/incoterms');
-const incoterms = ref(incotermsData.data.map(item => ({
-    value: item.id,
-    label: item.label
-}))); 
+    try {
+        const tiposContenedorData = await api.get('/tipos-contenedor');
+        tiposContenedor.value = tiposContenedorData.data.map(item => ({
+            value: item.id,
+            label: item.tipus
+        }));
+    } catch (error) {
+        console.error('Error loading tipos contenedor:', error);
+    }
 
-const operadoresLogisticosData = await axios.get('/api/getOperadores-logisticos');
-const operadoresLogisticos = ref(operadoresLogisticosData.data.map(item => ({
-  value: item.id,
-  label: item.nom + ' ' + item.cognoms + ' (' + item.correu + ')'
-})));
+    try {
+        const incotermsData = await api.get('/incoterms');
+        incoterms.value = incotermsData.data.map(item => ({
+            value: item.id,
+            label: item.label
+        }));
+    } catch (error) {
+        console.error('Error loading incoterms:', error);
+    }
+
+    try {
+        const operadoresLogisticosData = await api.get('/getOperadores-logisticos');
+        operadoresLogisticos.value = operadoresLogisticosData.data.map(item => ({
+            value: item.id,
+            label: item.nom + ' ' + item.cognoms + ' (' + item.correu + ')'
+        }));
+    } catch (error) {
+        console.error('Error loading operadores logísticos:', error);
+    }
+});
 
 const crearSolicitud = async () => {
+    if (isSubmitting.value) {
+        return;
+    }
+
     isSubmitting.value = true;
     statusMessage.value = '';
 
     try {
-        await axios.post('/api/solicitud-oferta', {
+        await api.post('/solicitud-oferta', {
             nombreMercancia: formData.value.nombreMercancia,
             tipoMercancia: formData.value.tipoMercancia,
             tipoContenedor: formData.value.tipoContenedor,
