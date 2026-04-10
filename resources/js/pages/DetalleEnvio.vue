@@ -16,13 +16,13 @@
             </div>
 
             <div class="shipment-header__actions">
-                <button type="button" class="btn" :disabled="!envio.canEdit" @click="isEditing = !isEditing">
-                    {{ isEditing ? 'Cancelar' : 'Editar' }}
-                </button>
-                <button type="button" class="btn btn--primary">QR</button>
+                <button type="button" class="btn">QR</button>
                 <button type="button" class="btn">Descargar Documentos</button>
-                <button type="button" class="btn btn--primary" :disabled="!envio.canEdit || !isEditing || isSaving" @click="saveChanges">
-                    {{ isSaving ? 'Guardando...' : 'Guardar Cambios' }}
+                <button type="button" class="btn btn--danger" :disabled="isDeleting || isAccepting" @click="deleteOferta">
+                    {{ isDeleting ? 'Eliminando...' : 'Eliminar oferta' }}
+                </button>
+                <button type="button" class="btn btn--success" :disabled="isDeleting || isAccepting" @click="acceptOferta">
+                    {{ isAccepting ? 'Aceptando...' : 'Aceptar oferta' }}
                 </button>
             </div>
         </header>
@@ -34,34 +34,33 @@
                     <div class="panel__body">
                         <div class="field full">
                             <label>Nombre de la mercancia</label>
-                            <Input :modelValue="envio.mercanciaNombre || 'No disponible'" type="text" inputClass="detail-input" />
+                            <Input :modelValue="envio.mercanciaNombre || 'No disponible'" type="text" inputClass="detail-input" readonly />
                         </div>
 
                         <div class="field full">
                             <label>Comentarios de la oferta</label>
-                            <Input v-if="isEditing" v-model="editableDescription" type="text" inputClass="detail-input" />
-                            <Input v-else :modelValue="envio.description || 'No disponible'" type="text" inputClass="detail-input" />
+                            <Input :modelValue="envio.description || 'No disponible'" type="text" inputClass="detail-input" readonly />
                         </div>
 
                         <div class="field-row">
                             <div class="field">
                                 <label>Tipo de mercancia</label>
-                                <Input :modelValue="envio.tipusCarregaNom || 'No disponible'" type="text" inputClass="detail-input" />
+                                <Input :modelValue="envio.tipusCarregaNom || 'No disponible'" type="text" inputClass="detail-input" readonly />
                             </div>
                             <div class="field">
                                 <label>Tipo de contenedor</label>
-                                <Input :modelValue="envio.tipusContenidorNom || 'No disponible'" type="text" inputClass="detail-input" />
+                                <Input :modelValue="envio.tipusContenidorNom || 'No disponible'" type="text" inputClass="detail-input" readonly />
                             </div>
                         </div>
 
                         <div class="field-row">
                             <div class="field">
                                 <label>Peso bruto (kg)</label>
-                                <Input :modelValue="envio.pesoBrut || 'No disponible'" type="text" inputClass="detail-input" />
+                                <Input :modelValue="envio.pesoBrut || 'No disponible'" type="text" inputClass="detail-input" readonly />
                             </div>
                             <div class="field">
                                 <label>Volumen (M³)</label>
-                                <Input :modelValue="envio.volum || 'No disponible'" type="text" inputClass="detail-input" />
+                                <Input :modelValue="envio.volum || 'No disponible'" type="text" inputClass="detail-input" readonly />
                             </div>
                         </div>
                     </div>
@@ -73,7 +72,7 @@
                         <div class="field-row">
                             <div class="field">
                                 <label>Tipo de Incoterm</label>
-                                <Input :modelValue="envio.incotermText || 'No disponible'" type="text" inputClass="detail-input" />
+                                <Input :modelValue="envio.incotermText || 'No disponible'" type="text" inputClass="detail-input" readonly />
                             </div>
                             <button type="button" class="guide-btn">Ver guia de Incoterms</button>
                         </div>
@@ -86,17 +85,17 @@
                         <div class="field-row">
                             <div class="field">
                                 <label>Origen</label>
-                                <Input :modelValue="envio.origenNom || 'No disponible'" type="text" inputClass="detail-input" />
+                                <Input :modelValue="envio.origenNom || 'No disponible'" type="text" inputClass="detail-input" readonly />
                             </div>
                             <div class="field">
                                 <label>Destino</label>
-                                <Input :modelValue="envio.destinoNom || 'No disponible'" type="text" inputClass="detail-input" />
+                                <Input :modelValue="envio.destinoNom || 'No disponible'" type="text" inputClass="detail-input" readonly />
                             </div>
                         </div>
 
                         <div class="field full">
                             <label>Representante de Venta</label>
-                            <Input :modelValue="envio.operadorNom || 'No disponible'" type="text" inputClass="detail-input" />
+                            <Input :modelValue="envio.operadorNom || 'No disponible'" type="text" inputClass="detail-input" readonly />
                         </div>
                     </div>
                 </article>
@@ -138,7 +137,6 @@ type OfertaDetalleApi = {
     id: number | string;
     ofertaId?: number | null;
     solicitudId?: number | null;
-    canEdit?: boolean;
     comentaris?: string | null;
     operacio_nom?: string | null;
     transportista_origen_nom?: string | null;
@@ -165,16 +163,14 @@ type OfertaDetalleApi = {
 const route = useRoute();
 const router = useRouter();
 const oferta = ref<OfertaDetalleApi | null>(null);
-const isEditing = ref(false);
-const isSaving = ref(false);
-const editableDescription = ref('');
+const isAccepting = ref(false);
+const isDeleting = ref(false);
 
 const loadOferta = async () => {
     try {
         const id = Number(route.params.id);
         const { data } = await api.get(`/ofertes/${id}`);
         oferta.value = data;
-        editableDescription.value = data.description || data.comentaris || '';
     } catch (error) {
         console.error('Error cargando detalle de oferta:', error);
     }
@@ -182,13 +178,10 @@ const loadOferta = async () => {
 
 const envio = computed(() => {
     const id = Number(route.params.id);
-    const ofertaId = oferta.value?.ofertaId ?? null;
-    const canEdit = Boolean(oferta.value?.canEdit && ofertaId);
 
     return {
-        id: ofertaId ?? id,
-        canEdit,
-        code: String(oferta.value?.code ?? ofertaId ?? oferta.value?.id ?? id),
+        id: Number(oferta.value?.id ?? id),
+        code: String(oferta.value?.code ?? oferta.value?.id ?? id),
         operation: oferta.value?.operation?.trim() || oferta.value?.operacio_nom?.trim() || 'No disponible',
         status: oferta.value?.status?.trim() || oferta.value?.estat_oferta_nom?.trim() || 'No disponible',
         carrier: oferta.value?.carrier?.trim() || oferta.value?.transportista_origen_nom?.trim() || 'No disponible',
@@ -210,24 +203,43 @@ const envio = computed(() => {
 
 onMounted(loadOferta);
 
-const saveChanges = async () => {
-    if (!oferta.value?.ofertaId || !oferta.value?.canEdit) return;
+const acceptOferta = async () => {
+    const id = envio.value.id;
 
-    isSaving.value = true;
+    if (!id || isAccepting.value || isDeleting.value) return;
+
+    isAccepting.value = true;
 
     try {
-        const id = Number(oferta.value.ofertaId);
-        const { data } = await api.put(`/ofertes/${id}`, {
-            comentaris: editableDescription.value,
-        });
-
-        oferta.value = data;
-        editableDescription.value = data.description || data.comentaris || '';
-        isEditing.value = false;
+        await api.post(`/ofertes/${id}/accept`);
+        await loadOferta();
     } catch (error) {
-        console.error('Error guardando oferta:', error);
+        console.error('Error aceptando oferta:', error);
     } finally {
-        isSaving.value = false;
+        isAccepting.value = false;
+    }
+};
+
+const deleteOferta = async () => {
+    const id = envio.value.id;
+
+    if (!id || isAccepting.value || isDeleting.value) return;
+
+    const confirmed = window.confirm('¿Eliminar esta oferta?');
+
+    if (!confirmed) {
+        return;
+    }
+
+    isDeleting.value = true;
+
+    try {
+        await api.delete(`/ofertes/${id}`);
+        router.push('/ofertas');
+    } catch (error) {
+        console.error('Error eliminando oferta:', error);
+    } finally {
+        isDeleting.value = false;
     }
 };
 </script>
@@ -290,6 +302,7 @@ const saveChanges = async () => {
 .shipment-header__actions {
     display: flex;
     gap: 8px;
+    flex-wrap: wrap;
 }
 
 .btn {
@@ -306,6 +319,18 @@ const saveChanges = async () => {
 .btn--primary {
     background: #1997d5;
     border-color: #1997d5;
+    color: #fff;
+}
+
+.btn--danger {
+    background: #ffffff;
+    border-color: #f2b6b6;
+    color: #dc3f3f;
+}
+
+.btn--success {
+    background: #19a96f;
+    border-color: #19a96f;
     color: #fff;
 }
 

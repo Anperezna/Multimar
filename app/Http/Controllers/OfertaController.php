@@ -58,6 +58,7 @@ class OfertaController extends Controller
         return [
             'id' => $id,
             'code' => (string) $id,
+            'kind' => 'Oferta',
             'description' => trim((string) ($oferta->comentaris ?? '')),
             'operation' => trim((string) ($oferta->operacio_nom ?? '')),
             'status' => trim((string) ($oferta->estat_oferta_nom ?? '')),
@@ -134,6 +135,8 @@ class OfertaController extends Controller
      */
     public function destroy(Oferta $oferta)
     {
-        //
+        $oferta->delete();
+
+        return response()->noContent();
     }
 }
