@@ -9,6 +9,7 @@ use App\Http\Controllers\CiutatController;
 use App\Http\Controllers\TipusContenidorController;
 use App\Http\Controllers\TipusCarregaController;
 use App\Http\Controllers\TipusIncotermController;
+use App\Http\Controllers\NotificacionController;
 use Illuminate\Support\Facades\Route;
 
 Route::post('/login', [AuthentificationController::class, 'login']);
@@ -46,6 +47,11 @@ Route::get('/tipos-incoterm', [TipusIncotermController::class, 'index']);
 Route::get('/getOperadores-logisticos', [UsuariController::class, 'getOperadoresLogisticos']);
 
 Route::post('/solicitud-oferta', [SolicitudController::class, 'store']);
+
+Route::get('/notificaciones', [NotificacionController::class, 'getMyNotifications']);
+Route::patch('/notificaciones/{id}/read', [NotificacionController::class, 'markAsRead']);
+Route::delete('/notificaciones/{id}', [NotificacionController::class, 'deleteNotification']);
+Route::get('/notificaciones/unread-count', [NotificacionController::class, 'getUnreadCount']);
 
 Route::post('/usuaris', [UsuariController::class, 'store']);
 Route::delete('/usuaris/{usuari}', [UsuariController::class, 'destroy']);

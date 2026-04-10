@@ -169,6 +169,29 @@ const isDeleting = ref(false);
 
 const loadOferta = async () => {
     const id = Number(route.params.id);
+    const preferredKind = String(route.query.kind || '').toLowerCase();
+
+    if (preferredKind === 'solicitud') {
+        try {
+            const { data: solicitudData } = await api.get(`/solicitudes/${id}`);
+            oferta.value = solicitudData;
+            entityKind.value = 'Solicitud';
+            return;
+        } catch (error) {
+            // fallback below
+        }
+    }
+
+    if (preferredKind === 'oferta') {
+        try {
+            const { data: ofertaData } = await api.get(`/ofertes/${id}`);
+            oferta.value = ofertaData;
+            entityKind.value = 'Oferta';
+            return;
+        } catch (error) {
+            // fallback below
+        }
+    }
 
     try {
         const { data: ofertaData } = await api.get(`/ofertes/${id}`);
@@ -185,6 +208,16 @@ const loadOferta = async () => {
     }
 };
 
+const normalizeStatusLabel = (status?: string | null): string => {
+    const value = (status || '').toLowerCase();
+
+    if (value.includes('accept') || value.includes('acept')) return 'Aceptada';
+    if (value.includes('cancel')) return 'Cancelada';
+    if (value.includes('pend')) return 'Pendiente';
+
+    return (status || '').trim() || 'No disponible';
+};
+
 const envio = computed(() => {
     const id = Number(route.params.id);
 
@@ -192,7 +225,7 @@ const envio = computed(() => {
         id: Number(oferta.value?.id ?? id),
         code: String(oferta.value?.code ?? oferta.value?.id ?? id),
         operation: oferta.value?.operation?.trim() || oferta.value?.operacio_nom?.trim() || 'No disponible',
-        status: oferta.value?.status?.trim() || oferta.value?.estat_oferta_nom?.trim() || 'No disponible',
+        status: normalizeStatusLabel(oferta.value?.status || oferta.value?.estat_oferta_nom),
         carrier: oferta.value?.carrier?.trim() || oferta.value?.transportista_origen_nom?.trim() || 'No disponible',
         description: oferta.value?.description?.trim() || oferta.value?.comentaris?.trim() || 'No disponible',
         mercanciaNombre: oferta.value?.mercanciaNombre?.trim() || 'No disponible',
@@ -225,13 +258,18 @@ const acceptOferta = async () => {
             const ofertaId = Number(data?.oferta_id);
 
             if (Number.isFinite(ofertaId)) {
-                await api.post(`/ofertes/${ofertaId}/accept`);
+                const { data: acceptedOferta } = await api.post(`/ofertes/${ofertaId}/accept`);
+                oferta.value = acceptedOferta;
+                entityKind.value = 'Oferta';
+                await router.replace({
+                    path: `/ofertas/${ofertaId}`,
+                    query: { kind: 'Oferta' },
+                });
             }
         } else {
-            await api.post(`/ofertes/${id}/accept`);
+            const { data: acceptedOferta } = await api.post(`/ofertes/${id}/accept`);
+            oferta.value = acceptedOferta;
         }
-
-        await router.push('/home');
     } catch (error) {
         console.error('Error aceptando oferta:', error);
     } finally {
@@ -258,13 +296,18 @@ const deleteOferta = async () => {
             const ofertaId = Number(data?.oferta_id);
 
             if (Number.isFinite(ofertaId)) {
-                await api.post(`/ofertes/${ofertaId}/cancel`);
+                const { data: canceledOferta } = await api.post(`/ofertes/${ofertaId}/cancel`);
+                oferta.value = canceledOferta;
+                entityKind.value = 'Oferta';
+                await router.replace({
+                    path: `/ofertas/${ofertaId}`,
+                    query: { kind: 'Oferta' },
+                });
             }
         } else {
-            await api.post(`/ofertes/${id}/cancel`);
+            const { data: canceledOferta } = await api.post(`/ofertes/${id}/cancel`);
+            oferta.value = canceledOferta;
         }
-
-        await router.push('/home');
     } catch (error) {
         console.error('Error eliminando oferta:', error);
     } finally {
