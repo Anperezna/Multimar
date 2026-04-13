@@ -35,4 +35,11 @@ return [
         ],
     ],
 
+    'chatbot' => [
+        'provider' => env('CHATBOT_PROVIDER', 'n8n'),
+        'n8n_webhook_url' => env('N8N_CHAT_WEBHOOK_URL'),
+        'ollama_base_url' => env('OLLAMA_BASE_URL', 'http://localhost:11434'),
+        'ollama_model' => env('OLLAMA_MODEL', 'qwen2.5-coder:1.5b'),
+    ],
+
 ];

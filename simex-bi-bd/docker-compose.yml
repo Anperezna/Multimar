@@ -1,0 +1,64 @@
+services:
+  spark:
+    image: apache/spark:3.5.1
+    environment:
+      - SPARK_MODE=master
+    volumes:
+      - ./datos:/opt/spark/datos
+      - ./spark-warehouse:/opt/spark/spark-warehouse
+    ports:
+      - "10000:10000" # Thrift Server (SQL para Superset)
+      - "8080:8080" # Spark Master UI
+    command: /bin/bash -c "/opt/spark/sbin/start-thriftserver.sh --master local[*] --conf spark.sql.warehouse.dir=/opt/spark/spark-warehouse; tail -f /opt/spark/logs/*.out"
+
+  superset:
+    build:
+      context: .
+      dockerfile: Dockerfile.superset
+    ports:
+      - "8088:8088"
+    environment:
+      - SUPERSET_SECRET_KEY=clase_datos_2024
+    depends_on:
+      - spark
+    volumes:
+      - ./superset_home:/app/superset_home
+    command: >
+      /bin/bash -c "mkdir -p /app/superset_home && superset db upgrade && superset fab create-admin --username admin --firstname admin --lastname admin --email admin@admin.com --password admin && superset init && /usr/bin/run-server.sh --host 0.0.0.0 --port 8088"
+
+  ollama:
+    image: ollama/ollama:latest
+    ports:
+      - "11434:11434"
+    volumes:
+      - ./ollama_data:/root/.ollama
+    restart: unless-stopped
+
+  ollama-init:
+    image: ollama/ollama:latest
+    depends_on:
+      - ollama
+    restart: "no"
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
+    entrypoint: /bin/bash
+    command: -c "sleep 10 && ollama pull qwen2.5-coder:1.5b"
+    environment:
+      - OLLAMA_HOST=ollama:11434
+
+  n8n:
+    image: n8nio/n8n:latest
+    user: root
+    ports:
+      - "5678:5678"
+    environment:
+      - N8N_BASIC_AUTH_ACTIVE=false
+      - N8N_SECURE_COOKIE=false
+      - OLLAMA_BASE_URL=http://ollama:11434
+    depends_on:
+      - ollama
+      - spark
+    volumes:
+      - ./n8n_data:/home/node/.n8n
+    restart: unless-stopped

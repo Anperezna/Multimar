@@ -79,9 +79,29 @@ class SolicitudController extends Controller
      */
     public function index()
     {
-        $solicitudes = $this->solicitudQuery()
+        /** @var \App\Models\Usuari|null $usuari */
+        $usuari = request()->user();
+
+        if (! $usuari) {
+            return response()->json(['error' => 'No autenticado'], 401);
+        }
+
+        $usuari->load('rol');
+        $rol = mb_strtolower(trim((string) ($usuari->rol?->rol ?? '')));
+
+        $query = $this->solicitudQuery()
             ->leftJoin('ofertes as o', 'solicitud.id', '=', 'o.solicitud_id')
-            ->whereNull('o.id')
+            ->whereNull('o.id');
+
+        if ($rol === 'operador') {
+            $query->where('solicitud.operador_id', $usuari->id);
+        }
+
+        if ($rol === 'usuari') {
+            $query->where('solicitud.client_id', $usuari->id);
+        }
+
+        $solicitudes = $query
             ->orderByDesc('solicitud.id')
             ->get()
             ->map(fn ($solicitud) => $this->toFrontendSolicitud($solicitud))

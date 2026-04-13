@@ -28,6 +28,11 @@
                     Ofertas
                 </router-link>
             </template>
+
+            <router-link to="/chatbot" class="navbar__item" active-class="active">
+                <img :src="chatbotIcon" alt="icons" class="navbar__icon">
+                Chatbot
+            </router-link>
         </div>
         <div class="navbar__right">
             <NotificationsPopup />
@@ -58,6 +63,7 @@ import usersIcon from '../../../public/icons_multimar/icons-simex/compartidos/li
 import dashboardIcon from '../../../public/icons_multimar/icons-simex/compartidos/light_icons/dashboard-w.svg';
 import solicitudOfertaIcon from '../../../public/icons_multimar/icons-simex/compartidos/light_icons/solicitud-w.svg';
 import ofertaIcon from '../../../public/icons_multimar/icons-simex/compartidos/light_icons/oferta-w.svg';
+import chatbotIcon from '../../../public/icons_multimar/icons-simex/daw/chatbot.svg';
 import api from '@/lib/api';
 
 const usuarioRol = ref(localStorage.getItem('user_rol') || '');

@@ -12,6 +12,7 @@ import Incoterm from '@/pages/Incoterm.vue';
 import SolicitudOferta from '@/pages/SolicitudOferta.vue';
 import Ofertas from '@/pages/Ofertas.vue';
 import DetalleEnvio from '@/pages/DetalleEnvio.vue';
+import Chatbot from '@/pages/Chatbot.vue';
 
 
 const routes = [
@@ -59,6 +60,10 @@ const routes = [
         path: '/ofertas/:id',
         name: 'detalle-oferta',
         component: DetalleEnvio
+    },
+    {
+        path: '/chatbot',
+        component: Chatbot,
     }
 ];
 

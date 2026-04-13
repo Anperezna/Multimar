@@ -101,7 +101,27 @@ class OfertaController extends Controller
      */
     public function index()
     {
-        $ofertes = $this->ofertaQuery()
+        /** @var \App\Models\Usuari|null $usuari */
+        $usuari = request()->user();
+
+        if (! $usuari) {
+            return response()->json(['error' => 'No autenticado'], 401);
+        }
+
+        $usuari->load('rol');
+        $rol = mb_strtolower(trim((string) ($usuari->rol?->rol ?? '')));
+
+        $query = $this->ofertaQuery();
+
+        if ($rol === 'operador') {
+            $query->where('ofertes.operador_id', $usuari->id);
+        }
+
+        if ($rol === 'usuari') {
+            $query->where('so.client_id', $usuari->id);
+        }
+
+        $ofertes = $query
             ->orderByDesc('ofertes.id')
             ->get()
             ->map(fn ($oferta) => $this->toFrontendOferta($oferta))
