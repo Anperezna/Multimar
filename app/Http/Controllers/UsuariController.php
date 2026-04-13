@@ -21,6 +21,7 @@ class UsuariController extends Controller
             'pais' => $usuari->pais?->nom,
             'correo' => $usuari->correu,
             'rol' => $usuari->rol?->rol,
+            'foto_user' => $usuari->foto_user,
         ];
     }
 
@@ -53,12 +54,17 @@ class UsuariController extends Controller
             'empresa' => ['nullable', 'string', 'max:100'],
             'pais' => ['nullable', 'string', 'max:50'],
             'correo' => ['required', 'email', 'max:50', 'unique:usuaris,correu,' . $usuari->id],
+            'foto_user' => ['nullable', 'string', 'max:5000000'],
         ]);
 
         $usuari->nom = trim((string) $request->input('nombre'));
         $usuari->cognoms = trim((string) $request->input('apellidos'));
         $usuari->empresa = trim((string) $request->input('empresa')) ?: null;
         $usuari->correu = trim((string) $request->input('correo'));
+
+        if ($request->filled('foto_user')) {
+            $usuari->foto_user = (string) $request->input('foto_user');
+        }
 
         $paisInput = trim((string) $request->input('pais'));
         if ($paisInput !== '') {

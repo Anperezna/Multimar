@@ -11,13 +11,14 @@
             <p v-if="saveError" class="feedback error">{{ saveError }}</p>
 
             <form class="panel-form" @submit.prevent="saveProfile">
-                <div class="avatar-row">
-                    <div class="avatar">{{ avatarInitials }}</div>
-                    <div>
-                        <strong>{{ fullName }}</strong>
-                        <small>{{ profile.correo || 'Sin correo' }}</small>
-                    </div>
-                </div>
+                <ProfileAvatarUploader
+                    :nombre="profile.nombre"
+                    :apellidos="profile.apellidos"
+                    :correo="profile.correo"
+                    :modelValue="profile.foto_user"
+                    @update:modelValue="onAvatarUpdated"
+                    @error="onAvatarError"
+                />
 
                 <div class="grid-two">
                     <div class="field">
@@ -88,6 +89,7 @@ import axios from 'axios';
 import { computed, onMounted, reactive, ref } from 'vue';
 import Botones from '@/components/Botones.vue';
 import Input from '@/components/Input.vue';
+import ProfileAvatarUploader from '@/components/ProfileAvatarUploader.vue';
 import SettingsLayout from '@/components/settings/SettingsLayout.vue';
 import api from '@/lib/api';
 
@@ -97,6 +99,7 @@ type ProfileResponse = {
     empresa?: string | null;
     pais?: string | null;
     correo?: string;
+    foto_user?: string | null;
 };
 
 const profile = reactive({
@@ -105,6 +108,7 @@ const profile = reactive({
     empresa: '',
     pais: '',
     correo: '',
+    foto_user: '',
 });
 
 const isLoading = ref(false);
@@ -122,24 +126,23 @@ const countryOptions = computed(() => {
     return Array.from(set);
 });
 
-const fullName = computed(() => {
-    const name = [profile.nombre, profile.apellidos].filter(Boolean).join(' ').trim();
-    return name || 'Usuario';
-});
-
-const avatarInitials = computed(() => {
-    const first = profile.nombre?.trim().charAt(0) || '';
-    const second = profile.apellidos?.trim().charAt(0) || '';
-    const initials = `${first}${second}`.toUpperCase();
-    return initials || 'U';
-});
-
 const applyProfile = (data: ProfileResponse) => {
     profile.nombre = data.nombre || '';
     profile.apellidos = data.apellidos || '';
     profile.empresa = data.empresa || '';
     profile.pais = data.pais || '';
     profile.correo = data.correo || '';
+    profile.foto_user = data.foto_user || '';
+};
+
+const onAvatarUpdated = (value: string) => {
+    profile.foto_user = value;
+    saveError.value = '';
+    saveSuccess.value = false;
+};
+
+const onAvatarError = (message: string) => {
+    saveError.value = message;
 };
 
 const fetchProfile = async () => {
@@ -168,6 +171,7 @@ const saveProfile = async () => {
             empresa: profile.empresa,
             pais: profile.pais,
             correo: profile.correo,
+            foto_user: profile.foto_user,
         });
 
         applyProfile(data);
@@ -252,31 +256,6 @@ onMounted(fetchProfile);
 .panel-form {
     display: grid;
     gap: 16px;
-}
-
-.avatar-row {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    margin-bottom: 2px;
-}
-
-.avatar {
-    width: 62px;
-    height: 62px;
-    border-radius: 50%;
-    display: grid;
-    place-items: center;
-    font-size: 1rem;
-    font-weight: 700;
-    background: #e4ebf5;
-    color: #3b4e66;
-}
-
-.avatar-row small {
-    display: block;
-    color: #6d7f96;
-    margin-top: 3px;
 }
 
 .grid-two {
