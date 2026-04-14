@@ -11,6 +11,7 @@ use App\Http\Controllers\TipusCarregaController;
 use App\Http\Controllers\TipusIncotermController;
 use App\Http\Controllers\NotificacionController;
 use App\Http\Controllers\ChatbotController;
+use App\Http\Controllers\TrackingStepController;
 use Illuminate\Support\Facades\Route;
 
 Route::post('/login', [AuthentificationController::class, 'login']);
@@ -18,6 +19,8 @@ Route::post('/login', [AuthentificationController::class, 'login']);
 
 
 Route::middleware(['auth:sanctum'])->group(function () {
+
+Route::get('/tracking-steps', [TrackingStepController::class, 'index']);
 
 Route::get('/user', [UsuariController::class, 'me']);
 Route::post('/user', [UsuariController::class, 'updateProfile']);
@@ -48,6 +51,8 @@ Route::get('/tipos-incoterm', [TipusIncotermController::class, 'index']);
 Route::get('/getOperadores-logisticos', [UsuariController::class, 'getOperadoresLogisticos']);
 
 Route::post('/solicitud-oferta', [SolicitudController::class, 'store']);
+Route::patch('/ofertes/{oferta}/tracking-step', [OfertaController::class, 'updateTrackingStep']);
+Route::patch('/solicitudes/{solicitud}/tracking-step', [SolicitudController::class, 'updateTrackingStep']);
 
 Route::get('/notificaciones', [NotificacionController::class, 'getMyNotifications']);
 Route::patch('/notificaciones/{id}/read', [NotificacionController::class, 'markAsRead']);

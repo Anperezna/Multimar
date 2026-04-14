@@ -30,6 +30,7 @@ class Solicitud extends Model
         'incoterm_id',
         'tipus_fluxe_id',
         'tipus_carrega_id',
+        'tracking_step_id',
     ];
 
     public function client()
