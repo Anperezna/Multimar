@@ -16,7 +16,7 @@
             </div>
 
             <div class="shipment-header__actions">
-                <button type="button" class="btn">QR</button>
+                <button type="button" class="btn" v-on:click="generateQR">QR</button>
                 <button type="button" class="btn">Descargar Documentos</button>
                 <button type="button" class="btn btn--danger" :disabled="isDeleting || isAccepting" @click="deleteOferta">
                     {{ isDeleting ? 'Cancelando...' : 'Cancelar oferta' }}
@@ -123,15 +123,42 @@
                 </div>
             </aside>
         </div>
+
+        <div v-if="showQrDialog" class="qr-overlay" @click.self="closeQrDialog">
+            <div class="qr-dialog">
+                <h3>QR con datos del envio</h3>
+                <p class="qr-hint">El QR contiene JSON para que la app móvil gestione el cambio de estado.</p>
+
+                <vue-qr
+                    :text="qrPayloadText"
+                    :size="220"
+                    :margin="10"
+                    colorDark="#000000"
+                    colorLight="#ffffff"
+                />
+
+                <p class="qr-url">{{ qrPayloadText }}</p>
+                <button type="button" class="btn" @click="closeQrDialog">Cerrar</button>
+            </div>
+        </div>
     </section>
 </template>
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import VueQr from 'vue-qr';
 import Input from '@/components/Input.vue';
 import Navbar from '@/components/Navbar.vue';
 import api from '@/lib/api';
+
+type QrStatusPayload = {
+    current_status: string;
+    next_status: string;
+    oferta_id: number | null;
+    solicitud_id: number | null;
+    generated_at: string;
+};
 
 type OfertaDetalleApi = {
     id: number | string;
@@ -166,6 +193,8 @@ const oferta = ref<OfertaDetalleApi | null>(null);
 const entityKind = ref<'Oferta' | 'Solicitud'>('Oferta');
 const isAccepting = ref(false);
 const isDeleting = ref(false);
+const showQrDialog = ref(false);
+const qrPayloadText = ref('');
 
 const loadOferta = async () => {
     const id = Number(route.params.id);
@@ -244,6 +273,45 @@ const envio = computed(() => {
 });
 
 onMounted(loadOferta);
+
+const closeQrDialog = () => {
+    showQrDialog.value = false;
+};
+
+const getNextStatus = (currentStatus: string): string => {
+    const normalized = currentStatus.trim().toLowerCase();
+
+    if (normalized === 'en proceso') return 'En Transporte';
+    if (normalized === 'nova') return 'En Proceso';
+    if (normalized === 'aceptada') return 'En Transporte';
+
+    return 'No definido';
+};
+
+const generateQR = () => {
+    const entityId = Number(envio.value.id);
+
+    if (!entityId || isAccepting.value || isDeleting.value) return;
+
+    const ofertaId = entityKind.value === 'Oferta'
+        ? entityId
+        : Number(oferta.value?.ofertaId ?? 0) || null;
+
+    const solicitudId = entityKind.value === 'Solicitud'
+        ? entityId
+        : Number(oferta.value?.solicitudId ?? 0) || null;
+
+    const payload: QrStatusPayload = {
+        current_status: envio.value.status || 'No disponible',
+        next_status: getNextStatus(envio.value.status || ''),
+        oferta_id: ofertaId,
+        solicitud_id: solicitudId,
+        generated_at: new Date().toISOString(),
+    };
+
+    qrPayloadText.value = JSON.stringify(payload);
+    showQrDialog.value = true;
+};
 
 const acceptOferta = async () => {
     const id = envio.value.id;
@@ -342,6 +410,46 @@ const deleteOferta = async () => {
     justify-content: space-between;
     align-items: center;
     margin-bottom: 14px;
+}
+
+.qr-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(16, 37, 63, 0.42);
+    display: grid;
+    place-items: center;
+    z-index: 1000;
+    padding: 16px;
+}
+
+.qr-dialog {
+    width: min(420px, 100%);
+    background: #fff;
+    border-radius: 12px;
+    border: 1px solid #d9e2ee;
+    padding: 16px;
+    display: grid;
+    gap: 12px;
+    justify-items: center;
+    text-align: center;
+}
+
+.qr-dialog h3 {
+    margin: 0;
+    color: #123153;
+}
+
+.qr-hint {
+    margin: 0;
+    font-size: 13px;
+    color: #536b86;
+}
+
+.qr-url {
+    margin: 0;
+    font-size: 11px;
+    color: #58708c;
+    word-break: break-all;
 }
 
 .shipment-header__left h1 {
