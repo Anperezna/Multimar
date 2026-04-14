@@ -51,6 +51,7 @@ class OfertaController extends Controller
                 'ofertes.vist',
                 'ofertes.acabat',
                 'ofertes.cancelat',
+                'ofertes.tracking_step_id',
                 'tt.tipus as tipus_transport_nom',
                 'tr.nom as transportista_origen_nom',
                 'eo.estat as estat_oferta_nom',
@@ -93,6 +94,7 @@ class OfertaController extends Controller
             'destinoNom' => trim((string) ($oferta->destino_nom ?? '')),
             'operadorNom' => trim((string) (($oferta->operador_nom ?? '') . ' ' . ($oferta->operador_cognoms ?? ''))),
             'incotermText' => trim((string) (($oferta->incoterm_codi ?? '') . ' ' . ($oferta->incoterm_nom ?? ''))),
+            'trackingStepId' => (int) ($oferta->tracking_step_id ?? 0) ?: null,
         ];
     }
 
@@ -177,6 +179,39 @@ class OfertaController extends Controller
         $oferta->delete();
 
         return response()->noContent();
+    }
+
+    public function updateTrackingStep(Request $request, Oferta $oferta)
+    {
+        $usuari = $request->user();
+        $usuari->load('rol');
+        $rol = mb_strtolower(trim((string) ($usuari->rol?->rol ?? '')));
+
+        if ($rol !== 'operador' && $rol !== 'admin') {
+            return response()->json(['message' => 'No autorizado'], 403);
+        }
+
+        $request->validate(['tracking_step_id' => 'required|integer|exists:tracking_steps,id']);
+
+        $oferta->tracking_step_id = $request->input('tracking_step_id');
+        $oferta->save();
+
+        $solicitud = Solicitud::find($oferta->solicitud_id);
+        if ($solicitud) {
+            $notificacion = new Notificacion();
+            $notificacion->id = (int) (Notificacion::max('id') ?? 0) + 1;
+            $notificacion->usuari_id = $solicitud->client_id;
+            $notificacion->titulo = 'Estado de tu pedido actualizado';
+            $notificacion->descripcion = 'Tu pedido cambió de estado. Verifica los detalles.';
+            $notificacion->visto = 0;
+            $notificacion->save();
+        }
+
+        $ofertaActualizada = $this->ofertaQuery()
+            ->where('ofertes.id', $oferta->id)
+            ->first();
+
+        return response()->json($this->toFrontendOferta($ofertaActualizada));
     }
 
     public function accept(Oferta $oferta)

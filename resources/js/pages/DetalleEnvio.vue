@@ -120,6 +120,37 @@
                         <small>Última actualización</small>
                         <p>{{ envio.lastUpdate || 'No disponible' }}</p>
                     </div>
+                    
+                    <div class="tracking-steps-container">
+                        <div v-for="section in trackingStepSections" :key="section.title" class="tracking-step-section">
+                            <small>{{ section.title }}</small>
+                            <div class="tracking-steps">
+                                <template v-if="canEditTracking">
+                                    <button
+                                        v-for="step in section.steps"
+                                        :key="step.id"
+                                        type="button"
+                                        class="tracking-step"
+                                        :class="{ 'tracking-step--active': step.id === currentTrackingStepId }"
+                                        :disabled="isUpdatingTracking"
+                                        @click="updateTrackingStep(step.id)"
+                                    >
+                                        {{ step.nom }}
+                                    </button>
+                                </template>
+                                <template v-else>
+                                    <span
+                                        v-for="step in section.steps"
+                                        :key="step.id"
+                                        class="tracking-step"
+                                        :class="{ 'tracking-step--active': step.id === currentTrackingStepId }"
+                                    >
+                                        {{ step.nom }}
+                                    </span>
+                                </template>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </aside>
         </div>
@@ -160,6 +191,12 @@ type QrStatusPayload = {
     generated_at: string;
 };
 
+type TrackingStepApi = {
+    id: number;
+    nom: string;
+    ordre: number;
+};
+
 type OfertaDetalleApi = {
     id: number | string;
     ofertaId?: number | null;
@@ -185,6 +222,7 @@ type OfertaDetalleApi = {
     incotermText?: string | null;
     dataCreacio?: string | null;
     lastUpdate?: string | null;
+    trackingStepId?: number | null;
 };
 
 const route = useRoute();
@@ -195,6 +233,30 @@ const isAccepting = ref(false);
 const isDeleting = ref(false);
 const showQrDialog = ref(false);
 const qrPayloadText = ref('');
+const trackingSteps = ref<TrackingStepApi[]>([]);
+const canEditTracking = ref(false);
+const isUpdatingTracking = ref(false);
+
+const currentTrackingStepId = computed(() => {
+    return oferta.value?.trackingStepId ?? trackingSteps.value[0]?.id ?? null;
+});
+
+const trackingStepSections = computed(() => {
+    return [
+        {
+            title: 'Proceso/Previo',
+            steps: trackingSteps.value.filter((step) => step.ordre <= 5),
+        },
+        {
+            title: 'Transporte',
+            steps: trackingSteps.value.filter((step) => step.ordre > 5 && step.ordre <= 10),
+        },
+        {
+            title: 'Cliente',
+            steps: trackingSteps.value.filter((step) => step.ordre > 10),
+        },
+    ].filter((section) => section.steps.length > 0);
+});
 
 const loadOferta = async () => {
     const id = Number(route.params.id);
@@ -272,7 +334,60 @@ const envio = computed(() => {
     };
 });
 
-onMounted(loadOferta);
+const loadUserRole = async () => {
+    try {
+        const { data } = await api.get('/user');
+        const rol = String(data.rol || data.rol?.rol || '').toLowerCase();
+        canEditTracking.value = rol === 'operador' || rol === 'admin';
+    } catch (error) {
+        console.error('Error cargando rol:', error);
+    }
+};
+
+const loadTrackingSteps = async () => {
+    try {
+        const { data } = await api.get('/tracking-steps');
+        trackingSteps.value = data;
+    } catch (error) {
+        console.error('Error cargando pasos:', error);
+    }
+};
+
+const updateTrackingStep = async (stepId: number) => {
+    if (!oferta.value || isUpdatingTracking.value) return;
+
+    isUpdatingTracking.value = true;
+    const currentOferta = oferta.value;
+    const previousTrackingStepId = currentOferta.trackingStepId ?? null;
+    oferta.value = {
+        ...currentOferta,
+        trackingStepId: stepId,
+    };
+
+    try {
+        const id = oferta.value.id;
+        const endpoint = entityKind.value === 'Oferta' 
+            ? `/ofertes/${id}/tracking-step`
+            : `/solicitudes/${id}/tracking-step`;
+
+        const { data } = await api.patch(endpoint, { tracking_step_id: stepId });
+        oferta.value = data;
+    } catch (error) {
+        oferta.value = {
+            ...currentOferta,
+            trackingStepId: previousTrackingStepId,
+        };
+        console.error('Error actualizando paso:', error);
+    } finally {
+        isUpdatingTracking.value = false;
+    }
+};
+
+onMounted(async () => {
+    await loadUserRole();
+    await loadTrackingSteps();
+    await loadOferta();
+});
 
 const closeQrDialog = () => {
     showQrDialog.value = false;
@@ -697,6 +812,59 @@ const deleteOferta = async () => {
 .timeline .is-active .dot {
     background: #1f9be1;
     border-color: #1f9be1;
+}
+
+.tracking-steps-container {
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid #e2e9f2;
+}
+
+.tracking-step-section {
+    margin-bottom: 14px;
+}
+
+.tracking-steps-container small {
+    color: #8ba1b8;
+    font-size: 10px;
+    margin-bottom: 8px;
+    display: block;
+}
+
+.tracking-steps {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+    gap: 8px;
+}
+
+.tracking-step {
+    background: #fff;
+    border: 1px solid #222222;
+    border-radius: 6px;
+    padding: 8px 10px;
+    font-size: 11px;
+    font-weight: 500;
+    color: #111111;
+    cursor: pointer;
+    opacity: 1;
+    transition: all 0.2s ease;
+}
+
+.tracking-step:hover:not(:disabled) {
+    background: #f2f2f2;
+}
+
+.tracking-step--active {
+    opacity: 1;
+    background: #1997d5;
+    border-color: #1997d5;
+    color: #ffffff;
+    font-weight: 700;
+}
+
+.tracking-step:disabled {
+    cursor: not-allowed;
+    opacity: 1;
 }
 
 @media (max-width: 1100px) {
