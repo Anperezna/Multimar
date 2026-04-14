@@ -74,7 +74,7 @@
                                 <label>Tipo de Incoterm</label>
                                 <Input :modelValue="envio.incotermText || 'No disponible'" type="text" inputClass="detail-input" readonly />
                             </div>
-                            <button type="button" class="guide-btn">Ver guia de Incoterms</button>
+                            <a href="/incoterm" class="guide-btn">Ver guía de Incotherms</a>
                         </div>
                     </div>
                 </article>
@@ -617,6 +617,10 @@ const deleteOferta = async () => {
     padding: 0 12px;
     margin-top: 22px;
     cursor: pointer;
+    text-align: center;
+    align-items: center;
+    display: flex;
+    justify-content: center;
 }
 
 .map-panel .map-box {
