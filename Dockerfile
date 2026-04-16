@@ -3,17 +3,13 @@ WORKDIR /var/www/html
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
-        bash \
         ca-certificates \
         curl \
-        gnupg \
-        unzip \
         unixodbc-dev \
         libicu-dev \
         libzip-dev \
-        libonig-dev \
-    && curl -fsSL https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor -o /usr/share/keyrings/microsoft.gpg \
-    && echo "deb [arch=amd64 signed-by=/usr/share/keyrings/microsoft.gpg] https://packages.microsoft.com/debian/12/prod bookworm main" > /etc/apt/sources.list.d/microsoft-prod.list \
+    && curl -fsSL https://packages.microsoft.com/keys/microsoft.asc -o /usr/share/keyrings/microsoft.asc \
+    && echo "deb [arch=amd64 signed-by=/usr/share/keyrings/microsoft.asc] https://packages.microsoft.com/debian/12/prod bookworm main" > /etc/apt/sources.list.d/microsoft-prod.list \
     && apt-get update \
     && ACCEPT_EULA=Y DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends msodbcsql18 mssql-tools18 \
     && pecl install sqlsrv-5.12.0 pdo_sqlsrv-5.12.0 \
@@ -28,6 +24,9 @@ COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
 FROM node:20-bookworm-slim AS frontend
 WORKDIR /var/www/html
+
+# Force frontend stage to wait for php-base, reducing peak disk usage from parallel builds.
+COPY --from=php-base /etc/debian_version /tmp/php-base-marker
 
 COPY package*.json ./
 RUN npm ci --include=optional
