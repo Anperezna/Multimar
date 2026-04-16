@@ -23,7 +23,6 @@ WORKDIR /var/www/html
 # Instalar dependencias del sistema
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
-        bash \
         ca-certificates \
         curl \
         gnupg \
@@ -31,14 +30,14 @@ RUN apt-get update \
         unixodbc-dev \
         libicu-dev \
         libzip-dev \
-        libonig-dev \
     && curl -fsSL https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor -o /usr/share/keyrings/microsoft.gpg \
     && echo "deb [arch=amd64 signed-by=/usr/share/keyrings/microsoft.gpg] https://packages.microsoft.com/debian/12/prod bookworm main" > /etc/apt/sources.list.d/microsoft-prod.list \
     && apt-get update \
-    && ACCEPT_EULA=Y DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends msodbcsql18 mssql-tools18 \
+    && ACCEPT_EULA=Y DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends msodbcsql18 \
     && pecl install sqlsrv-5.12.0 pdo_sqlsrv-5.12.0 \
     && docker-php-ext-enable sqlsrv pdo_sqlsrv \
     && docker-php-ext-install bcmath intl zip \
+    && apt-get purge -y --auto-remove gnupg \
     && rm -rf /var/lib/apt/lists/*
 
 # Composer
@@ -51,6 +50,7 @@ COPY . .
 RUN composer install \
     --no-interaction \
     --prefer-dist \
+    --no-progress \
     --optimize-autoloader \
     --no-dev
 
