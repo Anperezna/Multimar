@@ -34,6 +34,7 @@ class SolicitudController extends Controller
                 'solicitud.client_id',
                 'solicitud.operador_id',
                 'solicitud.tipus_transport_id',
+                'solicitud.tracking_step_id',
                 'tt.tipus as tipus_transport_nom',
                 'tf.tipus as operacio_nom',
                 'co.nom as origen_nom',
@@ -71,12 +72,43 @@ class SolicitudController extends Controller
             'destinoNom' => trim((string) ($solicitud->destino_nom ?? '')),
             'operadorNom' => trim((string) (($solicitud->operador_nom ?? '') . ' ' . ($solicitud->operador_cognoms ?? ''))),
             'incotermText' => trim((string) (($solicitud->incoterm_codi ?? '') . ' ' . ($solicitud->incoterm_nom ?? ''))),
+            'trackingStepId' => (int) ($solicitud->tracking_step_id ?? 0) ?: null,
         ];
     }
 
     /**
      * Display a listing of the resource.
      */
+    public function updateTrackingStep(Request $request, Solicitud $solicitud)
+    {
+        $usuari = $request->user();
+        $usuari->load('rol');
+        $rol = mb_strtolower(trim((string) ($usuari->rol?->rol ?? '')));
+
+        if ($rol !== 'operador' && $rol !== 'admin') {
+            return response()->json(['message' => 'No autorizado'], 403);
+        }
+
+        $request->validate(['tracking_step_id' => 'required|integer|exists:tracking_steps,id']);
+
+        $solicitud->tracking_step_id = $request->input('tracking_step_id');
+        $solicitud->save();
+
+        $notificacion = new Notificacion();
+        $notificacion->id = (int) (Notificacion::max('id') ?? 0) + 1;
+        $notificacion->usuari_id = $solicitud->client_id;
+        $notificacion->titulo = 'Estado de tu solicitud actualizado';
+        $notificacion->descripcion = 'Tu solicitud cambió de estado. Verifica los detalles.';
+        $notificacion->visto = 0;
+        $notificacion->save();
+
+        $solicitudActualizada = $this->solicitudQuery()
+            ->where('solicitud.id', $solicitud->id)
+            ->first();
+
+        return response()->json($this->toFrontendSolicitud($solicitudActualizada));
+    }
+
     public function index()
     {
         /** @var \App\Models\Usuari|null $usuari */

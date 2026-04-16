@@ -40,6 +40,7 @@ class Oferta extends Model
         'vist',
         'acabat',
         'cancelat',
+        'tracking_step_id',
     ];
 
     public function document()

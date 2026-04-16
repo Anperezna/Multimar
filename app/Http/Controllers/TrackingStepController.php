@@ -12,7 +12,8 @@ class TrackingStepController extends Controller
      */
     public function index()
     {
-        //
+        $steps = TrackingStep::orderBy('ordre')->select(['id', 'nom', 'ordre'])->get();
+        return response()->json($steps);
     }
 
     /**
