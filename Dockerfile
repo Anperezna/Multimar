@@ -6,7 +6,7 @@ WORKDIR /app
 # Copiar solo dependencias primero (mejor cache)
 COPY package*.json ./
 
-RUN npm ci --omit=optional --no-audit --no-fund
+RUN npm ci --no-audit --no-fund
 
 # Copiar resto del proyecto
 COPY . .
