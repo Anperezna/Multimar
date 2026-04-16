@@ -1,10 +1,5 @@
-FROM php:8.2-cli-bookworm
+FROM php:8.2-cli-bookworm AS php-base
 WORKDIR /var/www/html
-
-COPY --from=node:20-bookworm-slim /usr/local/bin/node /usr/local/bin/node
-COPY --from=node:20-bookworm-slim /usr/local/lib/node_modules /usr/local/lib/node_modules
-RUN ln -sf /usr/local/lib/node_modules/npm/bin/npm-cli.js /usr/local/bin/npm \
-    && ln -sf /usr/local/lib/node_modules/npm/bin/npx-cli.js /usr/local/bin/npx
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
@@ -31,19 +26,32 @@ RUN apt-get update \
 
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
-COPY . .
+FROM node:20-bookworm-slim AS frontend
+WORKDIR /var/www/html
 
+COPY package*.json ./
+RUN npm ci --include=optional
+
+COPY . .
+RUN npm run build
+
+FROM php-base AS backend
+WORKDIR /var/www/html
+
+COPY . .
 RUN composer install \
     --no-interaction \
     --prefer-dist \
-    --optimize-autoloader \
-    && npm install --include=optional \
-    && npm run build
+    --optimize-autoloader
 
-RUN mkdir -p storage/logs bootstrap/cache \
+FROM backend AS app
+RUN rm -rf public/build \
+    && mkdir -p public/build \
+    && mkdir -p storage/logs bootstrap/cache \
     && chown -R www-data:www-data storage bootstrap/cache \
     && chmod -R ug+rwx storage bootstrap/cache
 
+COPY --from=frontend /var/www/html/public/build ./public/build
 COPY docker/php/local.ini /usr/local/etc/php/conf.d/local.ini
 COPY docker/php/entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
