@@ -31,5 +31,5 @@ jobs:
           file: ./Dockerfile
           push: true
           tags: |
-            ${{ secrets.DOCKERHUB_USERNAME }}/multimar:latest
-            ${{ secrets.DOCKERHUB_USERNAME }}/multimar:${{ github.sha }}
+            ${{ secrets.DOCKERHUB_USERNAME }}/multimar-app:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/multimar-app:${{ github.sha }}
