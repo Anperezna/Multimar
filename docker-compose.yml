@@ -4,7 +4,7 @@ services:
       context: .
       dockerfile: Dockerfile
     ports:
-      - "${APP_PORT:-3000}:3000"
+      - '${APP_PORT:-3000}:3000'
     environment:
       APP_ENV: ${APP_ENV:-local}
       APP_DEBUG: ${APP_DEBUG:-true}
@@ -16,8 +16,8 @@ services:
       DB_DATABASE: ${DB_DATABASE}
       DB_USERNAME: ${DB_USERNAME}
       DB_PASSWORD: ${DB_PASSWORD}
-      DB_ENCRYPT: ${DB_ENCRYPT}
-      DB_TRUST_SERVER_CERTIFICATE: ${DB_TRUST_SERVER_CERTIFICATE}
+      DB_ENCRYPT: ${DB_ENCRYPT:-no}
+      DB_TRUST_SERVER_CERTIFICATE: ${DB_TRUST_SERVER_CERTIFICATE:-yes}
       CACHE_STORE: ${CACHE_STORE:-file}
       SESSION_DRIVER: ${SESSION_DRIVER:-file}
       QUEUE_CONNECTION: ${QUEUE_CONNECTION:-sync}

@@ -10,7 +10,7 @@ RUN npm run build
 
 
 # ---------- STAGE 2: PHP base ----------
-FROM php:8.2-cli-bookworm
+FROM php:8.2-fpm-bookworm
 
 WORKDIR /var/www/html
 
@@ -21,6 +21,8 @@ RUN apt-get update \
         ca-certificates \
         curl \
         gnupg \
+        nginx \
+        supervisor \
         unzip \
         unixodbc-dev \
         libicu-dev \
@@ -71,10 +73,12 @@ RUN mkdir -p storage/logs bootstrap/cache \
 
 # Config
 COPY docker/php/local.ini /usr/local/etc/php/conf.d/local.ini
+COPY docker/nginx/monolith.conf /etc/nginx/conf.d/default.conf
+COPY docker/supervisor/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 COPY docker/php/entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
 
 EXPOSE 3000
 
 ENTRYPOINT ["entrypoint.sh"]
-CMD ["sh", "-c", "echo '<---- App disponible en http://localhost:3000 ---->' && php artisan serve --host=0.0.0.0 --port=3000"]
+CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]

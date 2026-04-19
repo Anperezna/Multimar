@@ -1,0 +1,33 @@
+name: control-calidad-master
+
+# Ejecuta pruebas en cada pull request hacia master.
+on:
+  pull_request:
+    branches:
+      - master
+
+jobs:
+  control-calidad:
+    # Validacion minima para evitar merges con errores basicos.
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Descargar codigo
+        uses: actions/checkout@v6
+
+      - name: Configurar PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          tools: composer:v2
+
+      - name: Instalar dependencias
+        run: composer install --no-interaction --prefer-dist --optimize-autoloader
+
+      - name: Preparar entorno
+        run: |
+          cp .env.example .env
+          php artisan key:generate
+
+      - name: Ejecutar pruebas backend
+        run: ./vendor/bin/phpunit
