@@ -1,33 +1,38 @@
-name: control-calidad-master
+name: aviso-merge-master
 
-# Ejecuta pruebas en cada pull request hacia master.
 on:
   pull_request:
     branches:
       - master
+    types:
+      - closed
+
+permissions:
+  contents: read
 
 jobs:
-  control-calidad:
-    # Validacion minima para evitar merges con errores basicos.
+  enviar-correo-equipo:
+    if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
 
     steps:
-      - name: Descargar codigo
-        uses: actions/checkout@v4
-
-      - name: Configurar PHP
-        uses: shivammathur/setup-php@v2
+      - name: Enviar correo al equipo
+        uses: dawidd6/action-send-mail@v3
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          PR_AUTHOR: ${{ github.event.pull_request.user.login }}
         with:
-          php-version: '8.4'
-          tools: composer:v2
+          server_address: ${{ secrets.SMTP_SERVER }}
+          server_port: ${{ secrets.SMTP_PORT }}
+          username: ${{ secrets.SMTP_USERNAME }}
+          password: ${{ secrets.SMTP_PASSWORD }}
+          subject: '[Multimar] PR fusionado a master'
+          to: ${{ secrets.TEAM_EMAILS || secrets.SMTP_USERNAME }}
+          from: ${{ secrets.MAIL_FROM || secrets.SMTP_USERNAME }}
+          body: |
+            Se ha fusionado un pull request a la rama master.
 
-      - name: Instalar dependencias
-        run: composer install --no-interaction --prefer-dist --optimize-autoloader
-
-      - name: Preparar entorno
-        run: |
-          cp .env.example .env
-          php artisan key:generate
-
-      - name: Ejecutar pruebas backend
-        run: ./vendor/bin/phpunit
+            Titulo: ${{ env.PR_TITLE }}
+            Autor: ${{ env.PR_AUTHOR }}
+            Enlace: ${{ env.PR_URL }}
