@@ -2,18 +2,21 @@ name: construir-y-publicar-docker
 
 # Se ejecuta cuando hay cambios en la rama master.
 on:
-  push:
+  pull_request:
     branches:
       - master
+    types:
+      - closed
 
 jobs:
   construir-publicar:
+    if: github.event.pull_request.merged == true
     # Compila la imagen y la publica en Docker Hub.
     runs-on: ubuntu-latest
 
     steps:
       - name: Descargar codigo
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
 
       - name: Configurar Docker Buildx
         uses: docker/setup-buildx-action@v3
