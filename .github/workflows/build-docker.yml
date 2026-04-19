@@ -2,6 +2,9 @@ name: construir-y-publicar-docker
 
 # Se ejecuta cuando hay cambios en la rama master.
 on:
+  push:
+    branches:
+      - master
   pull_request:
     branches:
       - master
@@ -10,7 +13,7 @@ on:
 
 jobs:
   construir-publicar:
-    if: github.event.pull_request.merged == true
+    if: github.event_name == 'push' || github.event.pull_request.merged == true
     # Compila la imagen y la publica en Docker Hub.
     runs-on: ubuntu-latest
 
