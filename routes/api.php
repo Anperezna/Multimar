@@ -8,6 +8,7 @@ use App\Http\Controllers\SolicitudController;
 use App\Http\Controllers\CiutatController;
 use App\Http\Controllers\TipusContenidorController;
 use App\Http\Controllers\TipusCarregaController;
+use App\Http\Controllers\TipusFluxeController;
 use App\Http\Controllers\TipusIncotermController;
 use App\Http\Controllers\NotificacionController;
 use App\Http\Controllers\ChatbotController;
@@ -45,6 +46,8 @@ Route::delete('/solicitudes/{solicitud}', [SolicitudController::class, 'destroy'
 Route::get('/tipos-contenedor', [TipusContenidorController::class, 'index']);
 
 Route::get('/tipos-carga', [TipusCarregaController::class, 'index']);
+
+Route::get('/tipos-flujo', [TipusFluxeController::class, 'index']);
 
 Route::get('/tipos-incoterm', [TipusIncotermController::class, 'index']);
 

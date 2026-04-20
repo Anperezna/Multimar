@@ -121,6 +121,15 @@
                         </div>
                     </div>
                     <div class="form-group">
+                        <label class="form-label">Flujo</label>
+                        <Desplegable
+                            v-model="formData.tipusFluxe"
+                            :options="tiposFlujo"
+                            placeholder="Seleccionar flujo..."
+                            selectClass="form-select"
+                        />
+                    </div>
+                    <div class="form-group">
                         <label class="form-label">Representante de Venta (Operador Logístico)</label>
                         <Desplegable
                             v-model="formData.operador"
@@ -165,6 +174,7 @@ const formData = ref({
     incoterm: '',
     origen: '',
     destino: '',
+    tipusFluxe: '',
     operador: '',
 });
 
@@ -176,6 +186,7 @@ const ciutats = ref([]);
 const tiposCarga = ref([]);
 const tiposContenedor = ref([]);
 const incoterms = ref([]);
+const tiposFlujo = ref([]);
 const operadoresLogisticos = ref([]);
 
 // Cargar datos cuando el componente monta
@@ -221,6 +232,16 @@ onMounted(async () => {
     }
 
     try {
+        const tiposFlujoData = await api.get('/tipos-flujo');
+        tiposFlujo.value = tiposFlujoData.data.map(item => ({
+            value: item.id,
+            label: item.tipus
+        }));
+    } catch (error) {
+        console.error('Error loading tipos flujo:', error);
+    }
+
+    try {
         const operadoresLogisticosData = await api.get('/getOperadores-logisticos');
         operadoresLogisticos.value = operadoresLogisticosData.data.map(item => ({
             value: item.id,
@@ -249,6 +270,7 @@ const crearSolicitud = async () => {
             incoterm_id: formData.value.incoterm,
             origen_id: formData.value.origen,
             destino_id: formData.value.destino,
+            tipus_fluxe_id: formData.value.tipusFluxe,
             operador: formData.value.operador,
         });
 

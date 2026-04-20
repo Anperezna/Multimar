@@ -12,7 +12,9 @@ class TipusFluxeController extends Controller
      */
     public function index()
     {
-        //
+        $tipusFluxes = TipusFluxe::all();
+
+        return response()->json($tipusFluxes);
     }
 
     /**
