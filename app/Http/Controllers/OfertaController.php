@@ -103,7 +103,6 @@ class OfertaController extends Controller
      */
     public function index()
     {
-        /** @var \App\Models\Usuari|null $usuari */
         $usuari = request()->user();
 
         if (! $usuari) {

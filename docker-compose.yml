@@ -7,8 +7,8 @@ services:
       - ./datos:/opt/spark/datos
       - ./spark-warehouse:/opt/spark/spark-warehouse
     ports:
-      - "10000:10000" # Thrift Server (SQL para Superset)
-      - "8080:8080" # Spark Master UI
+      - '10000:10000' # Thrift Server (SQL para Superset)
+      - '8080:8080' # Spark Master UI
     command: /bin/bash -c "/opt/spark/sbin/start-thriftserver.sh --master local[*] --conf spark.sql.warehouse.dir=/opt/spark/spark-warehouse; tail -f /opt/spark/logs/*.out"
 
   superset:
@@ -16,7 +16,7 @@ services:
       context: .
       dockerfile: Dockerfile.superset
     ports:
-      - "8088:8088"
+      - '8088:8088'
     environment:
       - SUPERSET_SECRET_KEY=clase_datos_2024
     depends_on:
@@ -29,7 +29,7 @@ services:
   ollama:
     image: ollama/ollama:latest
     ports:
-      - "11434:11434"
+      - '11434:11434'
     volumes:
       - ./ollama_data:/root/.ollama
     restart: unless-stopped
@@ -38,7 +38,7 @@ services:
     image: ollama/ollama:latest
     depends_on:
       - ollama
-    restart: "no"
+    restart: 'no'
     dns:
       - 8.8.8.8
       - 8.8.4.4
@@ -51,7 +51,7 @@ services:
     image: n8nio/n8n:latest
     user: root
     ports:
-      - "5678:5678"
+      - '5678:5678'
     environment:
       - N8N_BASIC_AUTH_ACTIVE=false
       - N8N_SECURE_COOKIE=false

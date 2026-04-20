@@ -1,4 +1,14 @@
 #!/usr/bin/env sh
 set -e
 
-docker compose up --build
+echo "Iniciando aplicacion con Docker..."
+docker compose up --build -d
+
+echo ""
+echo "App iniciada en: http://localhost:3000"
+
+echo ""
+docker compose ps
+
+echo ""
+echo "Listo."

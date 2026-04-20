@@ -1,73 +1,84 @@
-# ----------- FRONTEND BUILD -----------
+# ---------- STAGE 1: Node build ----------
 FROM node:20-bookworm-slim AS node_builder
 
 WORKDIR /app
-
-# Copiar solo dependencias primero (mejor cache)
 COPY package*.json ./
+RUN npm ci --no-audit --no-fund
 
-RUN npm ci --omit=optional --no-audit --no-fund
-
-# Copiar resto del proyecto
 COPY . .
-
-# Build frontend (Vite, Laravel Mix, etc.)
 RUN npm run build
 
 
-# ----------- PHP APP -----------
-FROM php:8.2-cli-bookworm
+# ---------- STAGE 2: PHP base ----------
+FROM php:8.2-fpm-bookworm
 
 WORKDIR /var/www/html
 
-# Instalar dependencias del sistema
+# Instalar SOLO lo necesario + limpiar en el mismo layer
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         bash \
         ca-certificates \
         curl \
         gnupg \
+        nginx \
+        supervisor \
         unzip \
         unixodbc-dev \
         libicu-dev \
         libzip-dev \
         libonig-dev \
-    && curl -fsSL https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor -o /usr/share/keyrings/microsoft.gpg \
-    && echo "deb [arch=amd64 signed-by=/usr/share/keyrings/microsoft.gpg] https://packages.microsoft.com/debian/12/prod bookworm main" > /etc/apt/sources.list.d/microsoft-prod.list \
+    \
+    # Microsoft repo
+    && curl -fsSL https://packages.microsoft.com/keys/microsoft.asc \
+        | gpg --dearmor -o /usr/share/keyrings/microsoft.gpg \
+    && echo "deb [arch=amd64 signed-by=/usr/share/keyrings/microsoft.gpg] https://packages.microsoft.com/debian/12/prod bookworm main" \
+        > /etc/apt/sources.list.d/microsoft-prod.list \
+    \
     && apt-get update \
-    && ACCEPT_EULA=Y DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends msodbcsql18 mssql-tools18 \
+    && ACCEPT_EULA=Y DEBIAN_FRONTEND=noninteractive \
+        apt-get install -y --no-install-recommends \
+        msodbcsql18 \
+        mssql-tools18 \
+    \
+    # PHP extensions
     && pecl install sqlsrv-5.12.0 pdo_sqlsrv-5.12.0 \
     && docker-php-ext-enable sqlsrv pdo_sqlsrv \
     && docker-php-ext-install bcmath intl zip \
-    && rm -rf /var/lib/apt/lists/*
+    \
+    # 🔥 LIMPIEZA CRÍTICA (clave para evitar tu error)
+    && apt-get purge -y --auto-remove gnupg \
+    && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 # Composer
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
-# Copiar proyecto
+# Copiar app (sin node_modules)
 COPY . .
 
-# Instalar PHP deps (sin dev → más ligero)
+# Copiar assets ya compilados
+COPY --from=node_builder /app/public/build ./public/build
+
+# Instalar dependencias PHP (sin dev)
 RUN composer install \
+    --no-dev \
     --no-interaction \
     --prefer-dist \
-    --optimize-autoloader \
-    --no-dev
-
-# Copiar SOLO el build del frontend
-COPY --from=node_builder /app/public/build ./public/build
+    --optimize-autoloader
 
 # Permisos
 RUN mkdir -p storage/logs bootstrap/cache \
     && chown -R www-data:www-data storage bootstrap/cache \
     && chmod -R ug+rwx storage bootstrap/cache
 
-# Config extra
+# Config
 COPY docker/php/local.ini /usr/local/etc/php/conf.d/local.ini
+COPY docker/nginx/monolith.conf /etc/nginx/conf.d/default.conf
+COPY docker/supervisor/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 COPY docker/php/entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
 
 EXPOSE 3000
 
 ENTRYPOINT ["entrypoint.sh"]
-CMD ["sh", "-c", "echo '<---- App disponible en http://localhost:3000 ---->' && php artisan serve --host=0.0.0.0 --port=3000"]
+CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]

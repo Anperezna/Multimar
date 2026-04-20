@@ -1,0 +1,45 @@
+name: aviso-merge-master
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+    types:
+      - closed
+
+permissions:
+  contents: read
+
+jobs:
+  enviar-correo-equipo:
+    if: github.event_name == 'push' || github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Enviar correo al equipo
+        uses: dawidd6/action-send-mail@v3
+        env:
+          EVENT_TYPE: ${{ github.event_name }}
+          PR_TITLE: ${{ github.event.pull_request.title || github.event.head_commit.message }}
+          PR_URL: ${{ github.event.pull_request.html_url || format('{0}/{1}/commit/{2}', github.server_url, github.repository, github.sha) }}
+          PR_AUTHOR: ${{ github.event.pull_request.user.login || github.actor }}
+        with:
+          server_address: ${{ secrets.SMTP_SERVER }}
+          server_port: ${{ secrets.SMTP_PORT }}
+          secure: ${{ secrets.SMTP_PORT == '465' }}
+          username: ${{ secrets.SMTP_USERNAME }}
+          password: ${{ secrets.SMTP_PASSWORD }}
+          subject: '[Multimar] Cambio en master'
+          to: ${{ secrets.TEAM_EMAILS || secrets.SMTP_USERNAME }}
+          from: ${{ secrets.MAIL_FROM || secrets.SMTP_USERNAME }}
+          body: |
+            Se ha detectado un cambio en la rama master.
+
+            Evento: ${{ env.EVENT_TYPE }}
+
+            Titulo: ${{ env.PR_TITLE }}
+            Autor: ${{ env.PR_AUTHOR }}
+            Enlace: ${{ env.PR_URL }}

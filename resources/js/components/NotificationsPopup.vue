@@ -35,7 +35,7 @@
                         v-for="notif in notificaciones"
                         :key="notif.id"
                         class="notification-item"
-                        :class="{ 'unread': notif.visto === 0 }"
+                        :class="{ 'unread': esNoLeida(notif) }"
                     >
                         <div class="notification-content">
                             <h4 class="notification-title">{{ notif.titulo }}</h4>
@@ -43,7 +43,7 @@
                         </div>
                         <div class="notification-actions">
                             <button
-                                v-if="notif.visto === 0"
+                                v-if="esNoLeida(notif)"
                                 class="action-button read-button"
                                 type="button"
                                 @click="marcarLeida(notif.id)"
@@ -73,6 +73,10 @@ const isOpen = ref(false);
 const notificaciones = ref([]);
 const unreadCount = ref(0);
 
+function esNoLeida(notif) {
+    return notif.visto === 0 || notif.visto === '0' || notif.visto === false;
+}
+
 function togglePopup() {
     isOpen.value = !isOpen.value;
 }
@@ -83,7 +87,7 @@ async function cargar() {
     let contador = 0;
     let i = 0;
     while (i < notificaciones.value.length) {
-        if (notificaciones.value[i].visto === 0) {
+        if (esNoLeida(notificaciones.value[i])) {
             contador = contador + 1;
         }
         i = i + 1;
@@ -103,7 +107,7 @@ async function eliminar(notifId) {
     let contador = 0;
     let i = 0;
     while (i < notificaciones.value.length) {
-        if (notificaciones.value[i].visto === 0) {
+        if (esNoLeida(notificaciones.value[i])) {
             contador = contador + 1;
         }
         i = i + 1;
