@@ -2,10 +2,12 @@
 FROM node:20-bookworm-slim AS node_builder
 
 WORKDIR /app
+# Instala dependencias JS de forma reproducible.
 COPY package*.json ./
 RUN npm ci --no-audit --no-fund
 
 COPY . .
+# Genera assets de frontend (public/build) para servirlos con Nginx.
 RUN npm run build
 
 
@@ -21,8 +23,6 @@ RUN apt-get update \
         ca-certificates \
         curl \
         gnupg \
-        nginx \
-        supervisor \
         unzip \
         unixodbc-dev \
         libicu-dev \
@@ -50,7 +50,7 @@ RUN apt-get update \
     && apt-get purge -y --auto-remove gnupg \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
-# Composer
+# Composer binario sin instalar PHP Composer globalmente por apt.
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
 # Copiar app (sin node_modules)
@@ -73,12 +73,12 @@ RUN mkdir -p storage/logs bootstrap/cache \
 
 # Config
 COPY docker/php/local.ini /usr/local/etc/php/conf.d/local.ini
-COPY docker/nginx/monolith.conf /etc/nginx/conf.d/default.conf
-COPY docker/supervisor/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 COPY docker/php/entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
 
-EXPOSE 3000
+# Solo uso interno para FastCGI; no se publica al host.
+EXPOSE 9000
 
+# entrypoint prepara DB/migraciones; CMD arranca PHP-FPM en foreground.
 ENTRYPOINT ["entrypoint.sh"]
-CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]
+CMD ["php-fpm", "-F"]
