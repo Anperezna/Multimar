@@ -60,11 +60,7 @@ COPY . .
 COPY --from=node_builder /app/public/build ./public/build
 
 # Instalar dependencias PHP (sin dev)
-RUN composer install \
-    --no-dev \
-    --no-interaction \
-    --prefer-dist \
-    --optimize-autoloader
+RUN composer install
 
 # Permisos
 RUN mkdir -p storage/logs bootstrap/cache \
@@ -73,12 +69,8 @@ RUN mkdir -p storage/logs bootstrap/cache \
 
 # Config
 COPY docker/php/local.ini /usr/local/etc/php/conf.d/local.ini
-COPY docker/php/entrypoint.sh /usr/local/bin/entrypoint.sh
-RUN chmod +x /usr/local/bin/entrypoint.sh
 
 # Solo uso interno para FastCGI; no se publica al host.
 EXPOSE 9000
 
-# entrypoint prepara DB/migraciones; CMD arranca PHP-FPM en foreground.
-ENTRYPOINT ["entrypoint.sh"]
 CMD ["php-fpm", "-F"]
