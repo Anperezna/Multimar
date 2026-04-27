@@ -1,4 +1,30 @@
 services:
+  # Backend Laravel en PHP-FPM. No expone HTTP al host; solo FastCGI interno.
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    # .env se inyecta en runtime porque esta excluido del contexto de build.
+    env_file:
+      - .env
+    environment:
+      # Activa migraciones al arrancar el contenedor app.
+      RUN_MIGRATIONS: "true"
+    expose:
+      # Puerto interno de PHP-FPM para Nginx dentro de la red Docker.
+      - "9000"
+
+  # Frontend HTTP. Recibe peticiones en 3000 y las reenvia al servicio app.
+  nginx:
+    build:
+      context: .
+      dockerfile: docker/nginx/Dockerfile
+    ports:
+      # Puerto publico: host 3000 -> contenedor nginx 3000.
+      - "${APP_PORT:-3000}:3000"
+    depends_on:
+      - app
+
   spark:
     image: apache/spark:3.5.1
     environment:
