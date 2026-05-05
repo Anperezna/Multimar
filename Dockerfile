@@ -72,9 +72,11 @@ RUN mkdir -p storage/logs bootstrap/cache \
 # Config PHP
 COPY docker/php/local.ini /usr/local/etc/php/conf.d/local.ini
 
-# Config Nginx
-RUN rm -f /etc/nginx/conf.d/default.conf
+# Config Nginx (limpiar y configurar)
+RUN rm -rf /etc/nginx/conf.d/* /etc/nginx/sites-enabled/* /etc/nginx/sites-available/*
 COPY docker/nginx/default.conf /etc/nginx/conf.d/default.conf
+# Verificar que la configuración es válida
+RUN nginx -t
 
 # Config Supervisor
 RUN mkdir -p /var/log/supervisor
