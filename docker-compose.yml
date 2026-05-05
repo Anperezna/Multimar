@@ -1,5 +1,5 @@
 services:
-  # Backend Laravel en PHP-FPM. No expone HTTP al host; solo FastCGI interno.
+  # Backend + Frontend (monolith): Laravel PHP-FPM + Nginx + Supervisor
   app:
     build:
       context: .
@@ -10,20 +10,9 @@ services:
     environment:
       # Activa migraciones al arrancar el contenedor app.
       RUN_MIGRATIONS: "true"
-    expose:
-      # Puerto interno de PHP-FPM para Nginx dentro de la red Docker.
-      - "9000"
-
-  # Frontend HTTP. Recibe peticiones en 3000 y las reenvia al servicio app.
-  nginx:
-    build:
-      context: .
-      dockerfile: docker/nginx/Dockerfile
     ports:
-      # Puerto publico: host 3000 -> contenedor nginx 80 (compatible con Traefik).
+      # Puerto publico: host 3000 -> contenedor 80 (compatible desarrollo local y Dokploy).
       - "${APP_PORT:-3000}:80"
-    depends_on:
-      - app
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.multimar-app.rule=Host(`multimar-app-e330yi-6c471d-51-83-192-177.traefik.me`)"

@@ -28,6 +28,8 @@ RUN apt-get update \
         libicu-dev \
         libzip-dev \
         libonig-dev \
+        nginx \
+        supervisor \
     \
     # Microsoft repo
     && curl -fsSL https://packages.microsoft.com/keys/microsoft.asc \
@@ -67,10 +69,22 @@ RUN mkdir -p storage/logs bootstrap/cache \
     && chown -R www-data:www-data storage bootstrap/cache \
     && chmod -R ug+rwx storage bootstrap/cache
 
-# Config
+# Config PHP
 COPY docker/php/local.ini /usr/local/etc/php/conf.d/local.ini
 
-# Solo uso interno para FastCGI; no se publica al host.
-EXPOSE 9000
+# Config Nginx
+RUN rm -f /etc/nginx/conf.d/default.conf
+COPY docker/nginx/default.conf /etc/nginx/conf.d/default.conf
 
-CMD ["php-fpm", "-F"]
+# Config Supervisor
+RUN mkdir -p /var/log/supervisor
+COPY docker/supervisor/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+
+# Crear directorio de logs
+RUN mkdir -p /var/log/nginx
+
+# Puerto HTTP
+EXPOSE 80
+
+# Iniciar supervisord (gestiona PHP-FPM y Nginx)
+CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]
