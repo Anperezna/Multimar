@@ -79,6 +79,4 @@ RUN chmod +x /usr/local/bin/entrypoint.sh
 # Solo uso interno para FastCGI; no se publica al host.
 EXPOSE 9000
 
-# entrypoint prepara DB/migraciones; CMD arranca PHP-FPM en foreground.
-ENTRYPOINT ["entrypoint.sh"]
 CMD ["php-fpm", "-F"]
