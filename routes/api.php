@@ -23,6 +23,17 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
 Route::get('/tracking-steps', [TrackingStepController::class, 'index']);
 
+// Incoterms CRUD (métodos REST estándar)
+Route::post('/incoterms', [IncotermController::class, 'store']);
+Route::get('/incoterms/{incoterm}', [IncotermController::class, 'show']);
+Route::put('/incoterms/{incoterm}', [IncotermController::class, 'update']);
+Route::delete('/incoterms/{incoterm}', [IncotermController::class, 'destroy']);
+
+// Permitir crear pasos de tracking desde la UI
+Route::post('/tracking-steps', [TrackingStepController::class, 'store']);
+Route::put('/tracking-steps/{trackingStep}', [TrackingStepController::class, 'update']);
+Route::delete('/tracking-steps/{trackingStep}', [TrackingStepController::class, 'destroy']);
+
 Route::get('/user', [UsuariController::class, 'me']);
 Route::post('/user', [UsuariController::class, 'updateProfile']);
 Route::post('/user/password', [UsuariController::class, 'updatePassword']);

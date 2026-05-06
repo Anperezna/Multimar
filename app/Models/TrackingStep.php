@@ -19,11 +19,12 @@ class TrackingStep extends Model
         'id',
         'ordre',
         'nom',
+        'incoterm_id',
     ];
 
-    public function incoterms()
+    public function incoterm()
     {
-        return $this->hasMany(Incoterm::class, 'tracking_steps_id');
+        return $this->belongsTo(Incoterm::class, 'incoterm_id');
     }
 
     public function tipusTrackings()

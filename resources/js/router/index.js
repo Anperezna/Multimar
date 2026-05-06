@@ -9,6 +9,7 @@ import EditarPerfil from '@/pages/EditarPerfil.vue';
 import EditarContrasena from '@/pages/EditarContrasena.vue';
 import Accesibilidad from '@/pages/Accesibilidad.vue';
 import Incoterm from '@/pages/Incoterm.vue';
+import EditarIncoterms from '@/pages/EditarIncoterms.vue';
 import SolicitudOferta from '@/pages/SolicitudOferta.vue';
 import Ofertas from '@/pages/Ofertas.vue';
 import DetalleEnvio from '@/pages/DetalleEnvio.vue';
@@ -47,6 +48,15 @@ const routes = [
     {
         path: '/incoterm',
         component: Incoterm
+    },
+    {
+        path: '/incoterms/editar',
+        component: EditarIncoterms
+    },
+    {
+        path: '/incoterms/:id',
+        name: 'incoterm-detalle',
+        component: () => import('@/pages/IncotermDetalle.vue')
     },
     {
         path: '/solicitudOferta',
