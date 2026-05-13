@@ -33,6 +33,7 @@ Route::delete('/incoterms/{incoterm}', [IncotermController::class, 'destroy']);
 Route::post('/tracking-steps', [TrackingStepController::class, 'store']);
 Route::put('/tracking-steps/{trackingStep}', [TrackingStepController::class, 'update']);
 Route::delete('/tracking-steps/{trackingStep}', [TrackingStepController::class, 'destroy']);
+Route::post('/tracking-steps/actualizar-estados', [TrackingStepController::class, 'actualizarEstados']);
 
 Route::get('/user', [UsuariController::class, 'me']);
 Route::post('/user', [UsuariController::class, 'updateProfile']);

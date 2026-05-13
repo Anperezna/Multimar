@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\TrackingStep;
+use App\Models\Incoterm;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -35,19 +36,23 @@ class TrackingStepController extends Controller
             'ordre' => ['required', 'integer'],
         ]);
 
-        $existingStep = TrackingStep::where('incoterm_id', $validated['incoterm_id'])
-            ->where('ordre', $validated['ordre'])
-            ->first();
+        $step = null;
 
-        if ($existingStep) {
-            abort(422, 'Ya existe un paso con ese orden para este incoterm.');
-        }
+        DB::transaction(function () use ($validated, &$step) {
+            $existingStep = TrackingStep::where('incoterm_id', $validated['incoterm_id'])
+                ->where('ordre', $validated['ordre'])
+                ->first();
 
-        $step = new TrackingStep();
-        $step->nom = $validated['nom'];
-        $step->ordre = $validated['ordre'];
-        $step->incoterm_id = $validated['incoterm_id'];
-        $step->save();
+            if ($existingStep) {
+                abort(422, 'Ya existe un paso con ese orden para este incoterm.');
+            }
+
+            $step = new TrackingStep();
+            $step->nom = $validated['nom'];
+            $step->ordre = $validated['ordre'];
+            $step->incoterm_id = $validated['incoterm_id'];
+            $step->save();
+        });
 
         return $step;
     }
@@ -70,13 +75,11 @@ class TrackingStepController extends Controller
             'ordre' => ['required', 'integer', 'min:1'],
         ]);
 
-        $oldOrder = (int) $trackingStep->ordre;
-        $newOrder = (int) $validated['ordre'];
-        $incotermId = (int) $trackingStep->incoterm_id;
+        return DB::transaction(function () use ($validated, $trackingStep) {
+            $oldOrder = (int) $trackingStep->ordre;
+            $newOrder = (int) $validated['ordre'];
+            $incotermId = (int) $trackingStep->incoterm_id;
 
-        DB::beginTransaction();
-
-        try {
             if ($newOrder !== $oldOrder) {
                 if ($newOrder < $oldOrder) {
                     // Subir: desplazar hacia abajo los pasos entre newOrder y oldOrder-1
@@ -100,13 +103,30 @@ class TrackingStepController extends Controller
             $trackingStep->nom = $validated['nom'];
             $trackingStep->save();
 
-            DB::commit();
-
             return $trackingStep->fresh();
-        } catch (\Exception $e) {
-            DB::rollBack();
-            abort(500, 'No se pudo actualizar el paso.');
-        }
+        }, 5);
+    }
+
+    /**
+     * Actualizar estados de múltiples pasos (activo/inactivo)
+     */
+    public function actualizarEstados(Request $request)
+    {
+        $validated = $request->validate([
+            'pasos' => ['required', 'array'],
+            'pasos.*.id' => ['required', 'integer'],
+            'pasos.*.activo' => ['required', 'boolean'],
+        ]);
+
+        DB::transaction(function () use ($validated) {
+            foreach ($validated['pasos'] as $pasoData) {
+                $paso = TrackingStep::findOrFail($pasoData['id']);
+                $paso->activo = $pasoData['activo'];
+                $paso->save();
+            }
+        }, 5);
+
+        return ['message' => 'Estados actualizados correctamente.'];
     }
 
     /**
@@ -114,43 +134,34 @@ class TrackingStepController extends Controller
      */
     public function destroy(TrackingStep $trackingStep)
     {
-        DB::beginTransaction();
-
-        try {
+        DB::transaction(function () use ($trackingStep) {
+            // Buscar un paso de reemplazo para los incoterms que usen este paso
             $replacementStep = TrackingStep::where('incoterm_id', $trackingStep->incoterm_id)
                 ->where('id', '<>', $trackingStep->id)
                 ->orderBy('ordre')
                 ->first();
 
-            $incotermsUsingStep = DB::table('incoterms')
-                ->where('tracking_steps_id', $trackingStep->id)
-                ->exists();
+            // Verificar si hay incoterms que dependan de este paso
+            $incotermsUsingStep = Incoterm::where('tracking_steps_id', $trackingStep->id)->exists();
 
             if ($incotermsUsingStep && ! $replacementStep) {
-                DB::rollBack();
-
                 abort(409, 'El incoterm debe conservar al menos un paso.');
             }
 
+            // Si hay incoterms usando este paso, reasignarlos al paso de reemplazo
             if ($replacementStep) {
-                DB::table('incoterms')
-                    ->where('tracking_steps_id', $trackingStep->id)
+                Incoterm::where('tracking_steps_id', $trackingStep->id)
                     ->update(['tracking_steps_id' => $replacementStep->id]);
             }
 
+            // Reordenar pasos posteriores
             TrackingStep::where('incoterm_id', $trackingStep->incoterm_id)
                 ->where('ordre', '>', $trackingStep->ordre)
                 ->decrement('ordre');
 
             $trackingStep->delete();
+        }, 5);
 
-            DB::commit();
-
-            return ['message' => 'Paso eliminado correctamente.'];
-        } catch (\Exception $e) {
-            DB::rollBack();
-
-            abort(500, 'No se pudo eliminar el paso.');
-        }
+        return ['message' => 'Paso eliminado correctamente.'];
     }
 }

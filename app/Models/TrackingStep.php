@@ -20,6 +20,14 @@ class TrackingStep extends Model
         'ordre',
         'nom',
         'incoterm_id',
+        'activo',
+    ];
+
+    /**
+     * Cast attributes to native types for JSON responses and model access.
+     */
+    protected $casts = [
+        'activo' => 'boolean',
     ];
 
     public function incoterm()
