@@ -3,73 +3,106 @@
 namespace App\Http\Controllers;
 
 use App\Models\Incoterm;
+use App\Models\TipusIncoterm;
+use App\Models\TrackingStep;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class IncotermController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
     public function index()
     {
-        return Incoterm::query()
+        $incoterms = Incoterm::query()
             ->with('tipusIncoterm:id,codi,nom')
-            ->get()
-            ->map(function (Incoterm $incoterm) {
-                $tipus = $incoterm->tipusIncoterm;
+            ->withCount('trackingSteps')
+            ->get();
 
-                return [
-                    'id' => $incoterm->id,
-                    'label' => $tipus
-                        ? trim(($tipus->codi ?? '').' - '.($tipus->nom ?? ''))
-                        : 'Incoterm '.$incoterm->id,
-                ];
-            })
-            ->values();
+        $resultado = $incoterms->map(function (Incoterm $incoterm) {
+            $tipus = $incoterm->tipusIncoterm;
+
+            return [
+                'id' => $incoterm->id,
+                'label' => $tipus
+                    ? trim(($tipus->codi ?? '').' - '.($tipus->nom ?? ''))
+                    : 'Incoterm '.$incoterm->id,
+                'tipus_inconterm_id' => $incoterm->tipus_inconterm_id,
+                'tracking_steps_id' => $incoterm->tracking_steps_id,
+                'pasos_totales' => (int) ($incoterm->tracking_steps_count ?? 0),
+            ];
+        })->values();
+
+        return $resultado;
     }
 
-    /**
-     * Store a newly created resource in storage.
-     */
     public function store(Request $request)
     {
         $validated = $request->validate([
             'tipus_inconterm_id' => ['required', 'integer'],
-            'tracking_steps_id' => ['required', 'integer'],
+            'nom_primer_paso' => ['nullable', 'string', 'max:255'],
         ]);
+
+        $tipusIncoterm = TipusIncoterm::find((int) $validated['tipus_inconterm_id']);
+
+        if (! $tipusIncoterm) {
+            $resultado = response()->json([
+                'message' => 'No existe el tipo de incoterm seleccionado.',
+            ], 422);
+
+            return $resultado;
+        }
 
         DB::beginTransaction();
 
         try {
-            // Crear el registro con Eloquent usando save()
-            $incoterm = new Incoterm;
-            $incoterm->tipus_inconterm_id = $validated['tipus_inconterm_id'];
-            $incoterm->tracking_steps_id = $validated['tracking_steps_id'];
+            $primerPaso = new TrackingStep();
+            $primerPaso->nom = trim((string) ($validated['nom_primer_paso'] ?? '')) ?: 'Paso inicial';
+            $primerPaso->ordre = 1;
+            $primerPaso->activo = true;
+            $primerPaso->save();
+
+            $incoterm = new Incoterm();
+            $incoterm->tipus_inconterm_id = $tipusIncoterm->id;
+            $incoterm->tracking_steps_id = $primerPaso->id;
             $incoterm->save();
 
-            // Confirmar la transacción
+            $primerPaso->incoterm_id = $incoterm->id;
+            $primerPaso->save();
+
             DB::commit();
 
-            // Devolver el modelo creado
-            return $incoterm;
-        } catch (\Exception $e) {
-            // Si algo falla, deshacer cambios en la base de datos
+            $resultado = [
+                'id' => $incoterm->id,
+                'label' => trim(($tipusIncoterm->codi ?? '').' - '.($tipusIncoterm->nom ?? '')),
+                'tipus_inconterm_id' => $incoterm->tipus_inconterm_id,
+                'tracking_steps_id' => $incoterm->tracking_steps_id,
+            ];
+
+            return $resultado;
+        } catch (\Throwable $e) {
             DB::rollBack();
 
-            $mensaje = response('No se pudo crear el incoterm', 500);
+            $resultado = response()->json([
+                'message' => 'No se pudo crear el incoterm.',
+            ], 500);
 
-            return $mensaje;
+            return $resultado;
         }
     }
 
-    /**
-     * Display the specified resource.
-     */
     public function show(Incoterm $incoterm)
     {
-        return [
+        $incoterm->load([
+            'tipusIncoterm:id,codi,nom',
+            'trackingStep:id,nom,ordre,activo,incoterm_id',
+            'trackingSteps' => function ($consulta) {
+                $consulta->orderBy('ordre');
+            },
+        ]);
+
+        $resultado = [
             'id' => $incoterm->id,
+            'tipus_inconterm_id' => $incoterm->tipus_inconterm_id,
+            'tracking_steps_id' => $incoterm->tracking_steps_id,
             'tipus' => $incoterm->tipusIncoterm ? [
                 'id' => $incoterm->tipusIncoterm->id,
                 'codi' => $incoterm->tipusIncoterm->codi,
@@ -80,12 +113,19 @@ class IncotermController extends Controller
                 'nom' => $incoterm->trackingStep->nom,
                 'ordre' => $incoterm->trackingStep->ordre,
             ] : null,
+            'trackingSteps' => $incoterm->trackingSteps->map(function (TrackingStep $paso) {
+                return [
+                    'id' => $paso->id,
+                    'nom' => $paso->nom,
+                    'ordre' => $paso->ordre,
+                    'activo' => (bool) $paso->activo,
+                ];
+            })->values(),
         ];
+
+        return $resultado;
     }
 
-    /**
-     * Update the specified resource in storage.
-     */
     public function update(Request $request, Incoterm $incoterm)
     {
         $validated = $request->validate([
@@ -93,28 +133,44 @@ class IncotermController extends Controller
             'tracking_steps_id' => ['required', 'integer'],
         ]);
 
-        $incoterm->tipus_inconterm_id = $validated['tipus_inconterm_id'];
-        $incoterm->tracking_steps_id = $validated['tracking_steps_id'];
+        $tipusIncoterm = TipusIncoterm::find((int) $validated['tipus_inconterm_id']);
+        $trackingStep = TrackingStep::find((int) $validated['tracking_steps_id']);
+
+        if (! $tipusIncoterm || ! $trackingStep) {
+            $resultado = response()->json([
+                'message' => 'No se pudieron validar los datos del incoterm.',
+            ], 422);
+
+            return $resultado;
+        }
+
+        $incoterm->tipus_inconterm_id = $tipusIncoterm->id;
+        $incoterm->tracking_steps_id = $trackingStep->id;
         $incoterm->save();
 
-        return $incoterm;
+        $resultado = [
+            'message' => 'Incoterm actualizado correctamente.',
+        ];
+
+        return $resultado;
     }
 
-    /**
-     * Remove the specified resource from storage.
-     */
     public function destroy(Incoterm $incoterm)
     {
-        $incoterm->delete();
+        try {
+            $incoterm->delete();
 
-        return ['message' => 'Incoterm eliminado correctamente.'];
-    }
+            $resultado = [
+                'message' => 'Incoterm eliminado correctamente.',
+            ];
 
-    /**
-     * Alias para ver incoterms (reemplaza a index para uso administrativo).
-     */
-    public function verIncoterms()
-    {
-        return $this->index();
+            return $resultado;
+        } catch (\Throwable $e) {
+            $resultado = response()->json([
+                'message' => 'No se pudo eliminar el incoterm.',
+            ], 500);
+
+            return $resultado;
+        }
     }
 }
