@@ -5,8 +5,16 @@
         <main class="contenedor">
             <!-- SECCIÓN: LISTA DE INCOTERMS -->
             <section class="seccion-listado">
-                <h1>Gestión de Incoterms</h1>
-                <p>Selecciona un incoterm para editar sus pasos de seguimiento.</p>
+                <div class="encabezado-listado">
+                    <div>
+                        <h1>Gestión de Incoterms</h1>
+                        <p>Selecciona un incoterm para editar sus pasos de seguimiento.</p>
+                    </div>
+
+                    <button class="btn btn-crear-incoterm" @click="abrirFormularioNuevoIncoterm">
+                        + Añadir Incoterm
+                    </button>
+                </div>
 
                 <div v-if="cargando" class="estado-carga">
                     <span class="spinner"></span>
@@ -21,9 +29,12 @@
                     <article v-for="incoterm in incoterms" :key="incoterm.id" class="tarjeta-incoterm">
                         <div class="cabecera-tarjeta">
                             <p class="numero">Incoterm #{{ incoterm.id }}</p>
-                            <h3>{{ incoterm.label }}</h3>
+                            <h3>{{ obtenerLabelIncoterm(incoterm) }}</h3>
                         </div>
                         <div class="acciones-tarjeta">
+                            <button class="btn btn-editar-incoterm" @click="abrirFormularioEditarIncoterm(incoterm)">
+                                Editar incoterm
+                            </button>
                             <button class="btn btn-editar" @click="seleccionarIncoterm(incoterm)">
                                 Editar pasos
                             </button>
@@ -38,7 +49,7 @@
             <!-- SECCIÓN: EDITOR DE PASOS -->
             <section v-if="incotermSeleccionado" class="seccion-editor">
                 <div class="cabecera-editor">
-                    <h2>{{ incotermSeleccionado.label }}</h2>
+                    <h2>{{ obtenerLabelIncoterm(incotermSeleccionado) }}</h2>
                     <button class="btn btn-cerrar" @click="cerrarEditor">✕</button>
                 </div>
 
@@ -97,26 +108,128 @@
                 </div>
             </section>
         </main>
+
+        <div v-if="mostrarFormularioNuevoIncoterm" class="modal-overlay">
+            <div class="modal-incoterm">
+                <div class="modal-header">
+                    <h2>Añadir Incoterm</h2>
+                    <button class="btn btn-cerrar" @click="cerrarFormularioNuevoIncoterm">✕</button>
+                </div>
+
+                <form @submit.prevent="crearIncoterm">
+                    <FormularioNombreIncoterm
+                        :codigoActual="nuevoIncoterm.codi"
+                        :nombreActual="nuevoIncoterm.nom"
+                        @actualizar-codigo="nuevoIncoterm.codi = $event"
+                        @actualizar-nombre="nuevoIncoterm.nom = $event"
+                    />
+
+                    <div class="modal-actions">
+                        <button type="button" class="btn btn-cancelar-modal" @click="cerrarFormularioNuevoIncoterm">
+                            Cancelar
+                        </button>
+                        <button type="submit" class="btn btn-guardar" :disabled="creandoIncoterm">
+                            {{ creandoIncoterm ? 'Creando...' : 'Crear incoterm' }}
+                        </button>
+                    </div>
+
+                    <p v-if="mensaje" class="mensaje" :class="{ error: esError }">
+                        {{ mensaje }}
+                    </p>
+                </form>
+            </div>
+        </div>
+
+        <div v-if="mostrarFormularioEditarIncoterm" class="modal-overlay">
+            <div class="modal-incoterm">
+                <div class="modal-header">
+                    <h2>Editar Incoterm</h2>
+                    <button class="btn btn-cerrar" @click="cerrarFormularioEditarIncoterm">âœ•</button>
+                </div>
+
+                <form @submit.prevent="editarIncoterm">
+                    <FormularioNombreIncoterm
+                        :codigoActual="incotermEditando.codi"
+                        :nombreActual="incotermEditando.nom"
+                        @actualizar-codigo="incotermEditando.codi = $event"
+                        @actualizar-nombre="incotermEditando.nom = $event"
+                    />
+
+                    <div class="modal-actions">
+                        <button type="button" class="btn btn-cancelar-modal" @click="cerrarFormularioEditarIncoterm">
+                            Cancelar
+                        </button>
+                        <button type="submit" class="btn btn-guardar" :disabled="guardandoEdicionIncoterm">
+                            {{ guardandoEdicionIncoterm ? 'Guardando...' : 'Guardar cambios' }}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
     </div>
 </template>
 
 <script setup lang="ts">
 import { onMounted, ref } from 'vue';
 import Navbar from '@/components/Navbar.vue';
+import FormularioNombreIncoterm from '@/components/FormularioNombreIncoterm.vue';
 import api from '@/lib/api';
 
 // ESTADO
 const incoterms = ref([]);
+const tiposIncoterms = ref([]);
 const pasosDelIncoterm = ref([]);
 const incotermSeleccionado = ref(null);
 const cargando = ref(false);
 const guardando = ref(false);
+const creandoIncoterm = ref(false);
 const mensaje = ref('');
 const esError = ref(false);
 const mostrarFormularioPaso = ref(false);
+const mostrarFormularioNuevoIncoterm = ref(false);
+const mostrarFormularioEditarIncoterm = ref(false);
+const guardandoEdicionIncoterm = ref(false);
 const nuevoPaso = ref({
     nom: ''
 });
+const nuevoIncoterm = ref({
+    nom: '',
+    codi: ''
+});
+const incotermEditando = ref({
+    id: null,
+    nom: '',
+    codi: ''
+});
+
+function obtenerLabelIncoterm(incoterm) {
+    const tipoId =
+        incoterm?.tipus_inconterm_id ??
+        incoterm?.tipusIncoterm?.id ??
+        incoterm?.tipus?.id;
+
+    const tipus =
+        incoterm?.tipusIncoterm ||
+        incoterm?.tipus ||
+        tiposIncoterms.value.find(item => item.id == tipoId);
+
+    if (!tipus) {
+        return `Incoterm ${incoterm?.id ?? ''}`.trim();
+    }
+
+    return `${tipus.codi ?? ''} - ${tipus.nom ?? ''}`.trim().replace(/^\s*-\s*|\s*-\s*$/g, '');
+}
+
+// CARGAR TIPOS DE INCOTERM
+async function cargarTiposIncoterm() {
+    try {
+        const respuesta = await api.get('/tipos-incoterm');
+        tiposIncoterms.value = respuesta.data || [];
+    } catch (error) {
+        console.error('No se pudieron cargar los tipos de incoterm:', error);
+        tiposIncoterms.value = [];
+    }
+}
 
 // CARGAR INCOTERMS
 async function cargarIncoterms() {
@@ -237,6 +350,122 @@ function mostrarMensaje(texto, esErrorMensaje = false) {
     esError.value = esErrorMensaje;
 }
 
+function abrirFormularioNuevoIncoterm() {
+    mensaje.value = '';
+    esError.value = false;
+    nuevoIncoterm.value = { nom: '', codi: '' };
+    mostrarFormularioNuevoIncoterm.value = true;
+}
+
+function cerrarFormularioNuevoIncoterm() {
+    mostrarFormularioNuevoIncoterm.value = false;
+    nuevoIncoterm.value = { nom: '', codi: '' };
+}
+
+async function abrirFormularioEditarIncoterm(incoterm) {
+    const tipoId =
+        incoterm?.tipus_inconterm_id ??
+        incoterm?.tipusIncoterm?.id ??
+        incoterm?.tipus?.id;
+    const tipusLocal =
+        incoterm?.tipusIncoterm ||
+        incoterm?.tipus ||
+        tiposIncoterms.value.find(item => item.id == tipoId) ||
+        {};
+
+    incotermEditando.value = {
+        id: incoterm.id,
+        nom: tipusLocal.nom || '',
+        codi: tipusLocal.codi || '',
+    };
+    mostrarFormularioEditarIncoterm.value = true;
+
+    try {
+        const { data } = await api.get(`/incoterms/${incoterm.id}`);
+        const tipus = data?.tipusIncoterm || data?.tipus || {};
+
+        incotermEditando.value = {
+            id: incoterm.id,
+            nom: tipus.nom || incotermEditando.value.nom || '',
+            codi: tipus.codi || incotermEditando.value.codi || '',
+        };
+    } catch (error) {
+        console.error('No se pudieron refrescar los datos del incoterm a editar:', error);
+    }
+}
+
+function cerrarFormularioEditarIncoterm() {
+    mostrarFormularioEditarIncoterm.value = false;
+    incotermEditando.value = { id: null, nom: '', codi: '' };
+}
+
+async function crearIncoterm() {
+    if (!nuevoIncoterm.value.codi.trim() || !nuevoIncoterm.value.nom.trim()) {
+        mostrarMensaje('El código y el nombre son obligatorios.', true);
+        return;
+    }
+
+    creandoIncoterm.value = true;
+    mensaje.value = '';
+
+    try {
+        const respuesta = await api.post('/incoterms', {
+            codi: nuevoIncoterm.value.codi.trim(),
+            nom: nuevoIncoterm.value.nom.trim(),
+            tracking_steps_id: null,
+        });
+
+        await cargarTiposIncoterm();
+        await cargarIncoterms();
+
+        const incotermCreado = incoterms.value.find(item => item.id === respuesta.data?.id) || respuesta.data;
+        cerrarFormularioNuevoIncoterm();
+
+        if (incotermCreado) {
+            await seleccionarIncoterm(incotermCreado);
+        }
+
+        mostrarMensaje('Incoterm creado correctamente.', false);
+    } catch (error) {
+        mostrarMensaje(
+            error?.response?.data?.message || error?.response?.data || 'No se pudo crear el incoterm.',
+            true
+        );
+        console.error(error);
+    } finally {
+        creandoIncoterm.value = false;
+    }
+}
+
+async function editarIncoterm() {
+    if (!incotermEditando.value.codi.trim() || !incotermEditando.value.nom.trim()) {
+        mostrarMensaje('El cÃ³digo y el nombre son obligatorios.', true);
+        return;
+    }
+
+    guardandoEdicionIncoterm.value = true;
+
+    try {
+        await api.put(`/incoterms/${incotermEditando.value.id}`, {
+            codi: incotermEditando.value.codi.trim(),
+            nom: incotermEditando.value.nom.trim(),
+        });
+
+        await cargarTiposIncoterm();
+        await cargarIncoterms();
+        cerrarFormularioEditarIncoterm();
+        mostrarMensaje('Incoterm actualizado correctamente.', false);
+    } catch (error) {
+        mostrarMensaje(
+            error?.response?.data?.message || error?.response?.data || 'No se pudo editar el incoterm.',
+            true
+        );
+        console.error(error);
+    } finally {
+        guardandoEdicionIncoterm.value = false;
+    }
+}
+
 // CREAR NUEVO PASO
 async function crearPaso() {
     if (!nuevoPaso.value.nom.trim()) {
@@ -282,6 +511,7 @@ async function crearPaso() {
 
 // INICIALIZAR
 onMounted(async () => {
+    await cargarTiposIncoterm();
     await cargarIncoterms();
 });
 </script>
@@ -313,6 +543,8 @@ onMounted(async () => {
 }
 
 .seccion-listado {
+    position: relative;
+
     h1 {
         margin: 0 0 8px;
         font-size: clamp(1.8rem, 2.5vw, 2.4rem);
@@ -321,6 +553,20 @@ onMounted(async () => {
 
     > p {
         margin: 0 0 24px;
+        color: #5b6f88;
+        font-size: 1rem;
+    }
+}
+
+.encabezado-listado {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 16px;
+    margin-bottom: 24px;
+
+    p {
+        margin: 0;
         color: #5b6f88;
         font-size: 1rem;
     }
@@ -584,6 +830,12 @@ onMounted(async () => {
     }
 }
 
+.btn-editar-incoterm {
+    flex: 1;
+    background: linear-gradient(135deg, #334155 0%, #1e293b 100%);
+    color: white;
+}
+
 .btn-eliminar {
     flex: 1;
     background: #fee2e2;
@@ -591,6 +843,18 @@ onMounted(async () => {
 
     &:hover:not(:disabled) {
         background: #fecaca;
+    }
+}
+
+.btn-crear-incoterm {
+    flex: 0 0 auto;
+    align-self: flex-start;
+    background: linear-gradient(135deg, #0f172a 0%, #1d4ed8 100%);
+    color: #fff;
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.18);
+
+    &:hover:not(:disabled) {
+        box-shadow: 0 12px 28px rgba(29, 78, 216, 0.22);
     }
 }
 
@@ -614,6 +878,61 @@ onMounted(async () => {
     &:hover:not(:disabled) {
         background: #fff;
         border-color: #0ea5e9;
+    }
+}
+
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(7, 18, 34, 0.55);
+    backdrop-filter: blur(6px);
+    display: grid;
+    place-items: center;
+    padding: 20px;
+    z-index: 50;
+}
+
+.modal-incoterm {
+    width: min(560px, 100%);
+    background: #fff;
+    border-radius: 22px;
+    border: 1px solid #d8e3ef;
+    box-shadow: 0 28px 70px rgba(16, 36, 63, 0.22);
+    padding: 22px;
+
+    form {
+        display: grid;
+        gap: 16px;
+    }
+}
+
+.modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 18px;
+
+    h2 {
+        margin: 0;
+        font-size: 1.25rem;
+        color: #10243f;
+    }
+}
+
+.modal-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.btn-cancelar-modal {
+    flex: 1;
+    background: #f1f5f9;
+    color: #10243f;
+    border: 1px solid #d8e3ef;
+
+    &:hover:not(:disabled) {
+        background: #e2e8f0;
     }
 }
 

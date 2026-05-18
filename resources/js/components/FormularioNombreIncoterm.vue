@@ -1,26 +1,48 @@
 <template>
-    <div class="campo-nombre">
-        <label for="nombre-incoterm">Nombre del incoterm</label>
-        <input
-            id="nombre-incoterm"
-            type="text"
-            class="entrada-texto"
-            :value="nombreActual"
-            placeholder="Ej: CIF, FOB, EXW..."
-            @input="manejarCambioNombre"
-        />
+    <div class="campos-incoterm">
+        <div class="campo-incoterm">
+            <label for="codigo-incoterm">Código del incoterm</label>
+            <input
+                id="codigo-incoterm"
+                type="text"
+                class="entrada-texto"
+                :value="codigoActual"
+                placeholder="Ej: CIF"
+                @input="manejarCambioCodigo"
+            />
+        </div>
+
+        <div class="campo-incoterm">
+            <label for="nombre-incoterm">Nombre del incoterm</label>
+            <input
+                id="nombre-incoterm"
+                type="text"
+                class="entrada-texto"
+                :value="nombreActual"
+                placeholder="Ej: Cost, Insurance and Freight"
+                @input="manejarCambioNombre"
+            />
+        </div>
     </div>
 </template>
 
 <script setup>
 const props = defineProps({
+    codigoActual: {
+        type: String,
+        default: '',
+    },
     nombreActual: {
         type: String,
         default: '',
     },
 });
 
-const emit = defineEmits(['actualizar-nombre']);
+const emit = defineEmits(['actualizar-codigo', 'actualizar-nombre']);
+
+function manejarCambioCodigo(evento) {
+    emit('actualizar-codigo', evento.target.value);
+}
 
 function manejarCambioNombre(evento) {
     emit('actualizar-nombre', evento.target.value);
@@ -28,13 +50,18 @@ function manejarCambioNombre(evento) {
 </script>
 
 <style lang="scss" scoped>
-.campo-nombre {
+.campos-incoterm {
     display: grid;
     gap: 6px;
     margin-bottom: 18px;
 }
 
-.campo-nombre label {
+.campo-incoterm {
+    display: grid;
+    gap: 6px;
+}
+
+.campo-incoterm label {
     font-size: 0.9rem;
     font-weight: 700;
     color: #25415f;

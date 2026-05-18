@@ -205,9 +205,8 @@ async function crearPaso() {
         const created = data;
 
         // Asociar el nuevo paso al incoterm actual
-        await api.put(`/incoterms/${incotermId}`, {
+        await api.put(`/incoterms/${incotermId}/principal-step`, {
             tracking_steps_id: created.id,
-            tipus_inconterm_id: incoterm.value.tipus_inconterm_id || incoterm.value.tipus?.id || incoterm.value.tipusIncoterm?.id,
         });
 
         // Recargar datos

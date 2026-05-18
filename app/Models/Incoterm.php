@@ -15,8 +15,9 @@ class Incoterm extends Model
 
     public $incrementing = true;
 
+    protected $keyType = 'int';
+
     protected $fillable = [
-        'id',
         'tipus_inconterm_id',
         'tracking_steps_id',
     ];
