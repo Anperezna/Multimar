@@ -1,0 +1,548 @@
+{
+  "name": "My workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.text || $json.chatInput || $json.body?.text || 'Pregunta no recibida' }}",
+        "options": {
+          "systemMessage": "Eres un generador de SQL para PostgreSQL.\n\n  TABLA: commodity\n  COLUMNAS:\n  - country_or_area (VARCHAR) - nombre del país\n  - year (INTEGER) - año\n  - comm_code (VARCHAR) - código de commodity\n  - commodity (VARCHAR) - nombre del commodity\n  - flow (VARCHAR) - tipo de flujo (Export, Import, etc)\n  - trade_usd (BIGINT) - valor en USD\n  - weight_kg (BIGINT) - peso en kg\n  - quantity_name (VARCHAR)\n  - quantity (DOUBLE PRECISION)\n  - category (VARCHAR)\n\n  REGLAS:\n  1. Usa SOLO estas columnas exactas\n  2. Para \"país\" usa: country_or_area\n  3. Para \"valor\" usa: trade_usd\n  4. Genera solo la query SELECT válida\n  5. No agregues explicaciones, solo SQL\n  6. Si la pregunta no se puede responder, devuelve: NO_SQL\n\n  EJEMPLO:\n  Pregunta: \"País con más trade_usd\"\n  Respuesta: SELECT country_or_area, SUM(trade_usd) AS total_trade_usd FROM commodity GROUP BY\n  country_or_area ORDER BY total_trade_usd DESC LIMIT 1;"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        -320,
+        384
+      ],
+      "id": "ad3018e7-98cd-4dbb-b1c3-5a3e09a59607",
+      "name": "Generador de QUERYS"
+    },
+    {
+      "parameters": {
+        "promptType": "=define",
+        "text": "==Pregunta:\n  {{ $json.text || $json.chatInput || 'Pregunta no recibida' }}\n\n  Resultado SQL:\n  {{ JSON.stringify($json) }}",
+        "options": {
+          "systemMessage": "Eres un asistente que responde en español usando solo el resultado SQL.\n  Sé breve y claro.\n  Si no hay resultados, dilo explícitamente.\n  No inventes datos."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        192,
+        368
+      ],
+      "id": "8cf8262f-435b-4fd4-b461-3d9bf3284a91",
+      "name": "Respuesta de la IA"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        -512,
+        416
+      ],
+      "id": "8212256f-a9ce-4a08-806c-0a8a12d7c416",
+      "name": "EL MENSAJITO",
+      "webhookId": "da279700-6572-417f-9b63-a45af880ffef"
+    },
+    {
+      "parameters": {
+        "model": "=llama3.2:latest",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOllama",
+      "typeVersion": 1,
+      "position": [
+        -352,
+        608
+      ],
+      "id": "e27df8e3-c3bc-4393-9343-318f130c7a13",
+      "name": "MODELO QUE SINO PETA",
+      "credentials": {
+        "ollamaApi": {
+          "id": "qgerSQjhTMV7f839",
+          "name": "Ollama account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "90102028-5281-451d-ac1b-56eaefdb94f5",
+              "name": "sql_clean",
+              "value": "={{$json.output\n  .replace(/```sql/gi, '')\n  .replace(/```/g, '')\n  .replace(/^`|`$/g, '')\n  .trim()}}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -16,
+        384
+      ],
+      "id": "9c114e72-7bb0-44b6-b92a-e84ecb62379d",
+      "name": "Quitar caracteres que postgre no acepta"
+    },
+    {
+      "parameters": {
+        "model": "=llama3.2:latest",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOllama",
+      "typeVersion": 1,
+      "position": [
+        112,
+        608
+      ],
+      "id": "64d2ef38-6238-4a64-a0e2-29a448d7fbb4",
+      "name": "Pensador de los mensajes",
+      "credentials": {
+        "ollamaApi": {
+          "id": "qgerSQjhTMV7f839",
+          "name": "Ollama account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "{{$json.sql_clean}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgresTool",
+      "typeVersion": 2.6,
+      "position": [
+        448,
+        528
+      ],
+      "id": "9b200cc1-27ad-4cae-8763-6dbe1faa1c0e",
+      "name": "EJECUTADOR DE LA CONSULTA",
+      "credentials": {
+        "postgres": {
+          "id": "YWc6Sax1KmGVTw1J",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -544,
+        96
+      ],
+      "id": "5e33a57c-8a3c-450d-8b12-48232e181fa4",
+      "name": "DALE CLICK"
+    },
+    {
+      "parameters": {
+        "fileSelector": "/root/.n8n-files/n8n_input.csv",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1.1,
+      "position": [
+        -352,
+        96
+      ],
+      "id": "45be7264-c490-4348-8f84-5338251dbdc0",
+      "name": "LEER ARCHIVO .CSV"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1.1,
+      "position": [
+        -80,
+        208
+      ],
+      "id": "bc59446c-6f9a-4ba9-8a63-d2344d593564",
+      "name": "EXTRAER .CSV"
+    },
+    {
+      "parameters": {
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public"
+        },
+        "table": {
+          "__rl": true,
+          "value": "commodity",
+          "mode": "list",
+          "cachedResultName": "commodity"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "year": "={{ $json.year }}",
+            "trade_usd": "={{ $json.trade_usd }}",
+            "weight_kg": "={{ $json.weight_kg }}",
+            "quantity": "={{ $json.quantity }}",
+            "country_or_area": "={{ $json.country_or_area }}",
+            "comm_code": "={{ $json.comm_code }}",
+            "commodity": "={{ $json.commodity }}",
+            "flow": "={{ $json.flow }}",
+            "quantity_name": "={{ $json.quantity_name }}",
+            "category": "={{ $json.category }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "country_or_area",
+              "displayName": "country_or_area",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "year",
+              "displayName": "year",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "comm_code",
+              "displayName": "comm_code",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "commodity",
+              "displayName": "commodity",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "flow",
+              "displayName": "flow",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "trade_usd",
+              "displayName": "trade_usd",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "weight_kg",
+              "displayName": "weight_kg",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "quantity_name",
+              "displayName": "quantity_name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "quantity",
+              "displayName": "quantity",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "category",
+              "displayName": "category",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        144,
+        208
+      ],
+      "id": "cdfcf5f7-7b26-48e7-bdd7-7be1cfb2f2ab",
+      "name": "INSERT EN LA BBDD",
+      "credentials": {
+        "postgres": {
+          "id": "YWc6Sax1KmGVTw1J",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "docker compose exec postgres-metastore psql -U hive -d metastore\n\nCREATE TABLE public.commodity_trade (\n    id SERIAL PRIMARY KEY,\n    country_or_area VARCHAR(255),\n    year INTEGER,\n    comm_code VARCHAR(50),\n    commodity VARCHAR(500),\n    flow VARCHAR(50),\n    trade_usd BIGINT,\n    weight_kg BIGINT,\n    quantity_name VARCHAR(100),\n    quantity BIGINT,\n    category VARCHAR(255),\n    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP\n);"
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        0,
+        0
+      ],
+      "typeVersion": 1,
+      "id": "acbb2a54-e829-46d0-83cc-7997d0b52ca1",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "content": "Postgres;\n\nHost\npostgres-metastore\n\nDatabase\nmetastore\n\nUser\nhive\n\nPassword\nhive"
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        320,
+        48
+      ],
+      "typeVersion": 1,
+      "id": "515d4d1c-355c-431b-a1b1-a511f2903326",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "content": "Credential\nOllama account\n\nBase URL: http://ollama:11434\n\nModel\nllama3.2:latest"
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -672,
+        560
+      ],
+      "typeVersion": 1,
+      "id": "e565070b-ec1a-48bf-b612-82e6dcee9c74",
+      "name": "Sticky Note2"
+    },
+    {
+      "parameters": {
+        "content": "Credential\nOllama account\n\nBase URL: http://ollama:11434\n\nModel\nllama3.2:latest"
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -160,
+        608
+      ],
+      "typeVersion": 1,
+      "id": "5bb57361-8010-415b-85da-3258d8ac1d44",
+      "name": "Sticky Note3"
+    },
+    {
+      "parameters": {
+        "content": "Postgres;\n\nHost\npostgres-metastore\n\nDatabase\nmetastore\n\nUser\nhive\n\nPassword\nhive"
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        576,
+        528
+      ],
+      "typeVersion": 1,
+      "id": "0df3ccc5-0396-4103-aac6-8effdcfed3b9",
+      "name": "Sticky Note4"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "chat-db",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -512,
+        272
+      ],
+      "id": "a6aff0f4-66ff-47bd-a1cb-02dd4751228a",
+      "name": "Webhook",
+      "webhookId": "498ed2d6-ffde-4468-9b61-1f70544f9e2b"
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={\n    \"message\": \"={{ $json.output ?? $json.text ?? $json.message ?? 'Sin respuesta' }}\"\n  }",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        512,
+        368
+      ],
+      "id": "5b956acc-2d4d-4956-9171-85edfeb52197",
+      "name": "Respond to Webhook"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Generador de QUERYS": {
+      "main": [
+        [
+          {
+            "node": "Quitar caracteres que postgre no acepta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "EL MENSAJITO": {
+      "main": [
+        [
+          {
+            "node": "Generador de QUERYS",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "MODELO QUE SINO PETA": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Generador de QUERYS",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Quitar caracteres que postgre no acepta": {
+      "main": [
+        [
+          {
+            "node": "Respuesta de la IA",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pensador de los mensajes": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Respuesta de la IA",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "EJECUTADOR DE LA CONSULTA": {
+      "ai_tool": [
+        [
+          {
+            "node": "Respuesta de la IA",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "DALE CLICK": {
+      "main": [
+        [
+          {
+            "node": "LEER ARCHIVO .CSV",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "LEER ARCHIVO .CSV": {
+      "main": [
+        [
+          {
+            "node": "EXTRAER .CSV",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "EXTRAER .CSV": {
+      "main": [
+        [
+          {
+            "node": "INSERT EN LA BBDD",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Generador de QUERYS",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Respuesta de la IA": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "fc34b73c-0d38-4d04-b613-952f2029b600",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "67774311a5763f47e8c7d08111ccedfc79079d012b0041c5b8bc03a4578e94cf"
+  },
+  "id": "m5yxciAt51LTjutk",
+  "tags": []
+}
