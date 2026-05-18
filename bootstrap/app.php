@@ -3,6 +3,7 @@
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use Illuminate\Http\Request;
 use Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets;
 
 return Application::configure(basePath: dirname(__DIR__))
@@ -16,6 +17,10 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->web(append: [
             AddLinkHeadersForPreloadedAssets::class,
         ]);
+
+        $middleware->redirectGuestsTo(function (Request $request): ?string {
+            return $request->expectsJson() ? null : '/';
+        });
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //

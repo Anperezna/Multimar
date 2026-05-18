@@ -18,4 +18,4 @@ COPY docker/nginx/default.conf /etc/nginx/conf.d/default.conf
 COPY --from=node_builder /app/public /var/www/html/public
 
 # Puerto HTTP del contenedor nginx.
-EXPOSE 3000
+EXPOSE 80

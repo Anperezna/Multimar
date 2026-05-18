@@ -42,4 +42,12 @@ return [
         'ollama_model' => env('OLLAMA_MODEL', 'qwen2.5-coder:1.5b'),
     ],
 
+    'superset' => [
+        'internal_base_url' => env('SUPERSET_INTERNAL_BASE_URL', 'http://host.docker.internal:8088'),
+        'public_base_url' => env('SUPERSET_PUBLIC_BASE_URL', 'http://localhost:8088'),
+        'username' => env('SUPERSET_USERNAME', 'admin'),
+        'password' => env('SUPERSET_PASSWORD', 'admin'),
+        'dashboard_embed_param' => env('SUPERSET_DASHBOARD_EMBED_PARAM', 'standalone=1'),
+    ],
+
 ];

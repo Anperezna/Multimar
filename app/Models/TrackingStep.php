@@ -19,11 +19,20 @@ class TrackingStep extends Model
         'id',
         'ordre',
         'nom',
+        'incoterm_id',
+        'activo',
     ];
 
-    public function incoterms()
+    /**
+     * Cast attributes to native types for JSON responses and model access.
+     */
+    protected $casts = [
+        'activo' => 'boolean',
+    ];
+
+    public function incoterm()
     {
-        return $this->hasMany(Incoterm::class, 'tracking_steps_id');
+        return $this->belongsTo(Incoterm::class, 'incoterm_id');
     }
 
     public function tipusTrackings()

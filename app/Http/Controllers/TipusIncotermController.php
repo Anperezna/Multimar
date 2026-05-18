@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Models\TipusIncoterm;
-use Illuminate\Http\Request;
 
 class TipusIncotermController extends Controller
 {
@@ -12,39 +11,18 @@ class TipusIncotermController extends Controller
      */
     public function index()
     {
-        $tiposIncoterm = TipusIncoterm::all();
-        return response()->json($tiposIncoterm);
-    }
+        $tiposIncoterm = TipusIncoterm::orderBy('codi')
+            ->get(['id', 'codi', 'nom'])
+            ->map(function (TipusIncoterm $tipusIncoterm) {
+                return [
+                    'id' => $tipusIncoterm->id,
+                    'codi' => $tipusIncoterm->codi,
+                    'nom' => $tipusIncoterm->nom,
+                    'label' => trim(($tipusIncoterm->codi ?? '').' - '.($tipusIncoterm->nom ?? '')),
+                ];
+            })
+            ->values();
 
-    /**
-     * Store a newly created resource in storage.
-     */
-    public function store(Request $request)
-    {
-        //
-    }
-
-    /**
-     * Display the specified resource.
-     */
-    public function show(TipusIncoterm $tipusIncoterm)
-    {
-        //
-    }
-
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(Request $request, TipusIncoterm $tipusIncoterm)
-    {
-        //
-    }
-
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy(TipusIncoterm $tipusIncoterm)
-    {
-        //
+        return $tiposIncoterm;
     }
 }
