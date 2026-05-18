@@ -8,4 +8,4 @@ services:
     environment:
       RUN_MIGRATIONS: "true"
     expose:
-      - "80"
+      - "80"  

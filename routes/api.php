@@ -13,6 +13,8 @@ use App\Http\Controllers\TipusIncotermController;
 use App\Http\Controllers\NotificacionController;
 use App\Http\Controllers\ChatbotController;
 use App\Http\Controllers\TrackingStepController;
+use App\Http\Controllers\LiniaTransportMaritimController;
+use App\Http\Controllers\PortController;
 use Illuminate\Support\Facades\Route;
 
 Route::post('/login', [AuthentificationController::class, 'login']);
@@ -31,6 +33,7 @@ Route::post('/logout', [AuthentificationController::class, 'logout']);
 Route::get('/usuaris', [UsuariController::class, 'index']);
 
 Route::get('/ciutats', [CiutatController::class, 'index']);
+Route::get('/port', [PortController::class, 'index']);
 Route::get('/incoterms', [IncotermController::class, 'index']);
 Route::get('/ofertes', [OfertaController::class, 'index']);
 Route::get('/ofertes/{id}', [OfertaController::class, 'show']);
@@ -65,4 +68,10 @@ Route::post('/chatbot/message', [ChatbotController::class, 'message']);
 
 Route::post('/usuaris', [UsuariController::class, 'store']);
 Route::delete('/usuaris/{usuari}', [UsuariController::class, 'destroy']);
+
+Route::get('/linias-maritimas', [LiniaTransportMaritimController::class, 'index']);
+Route::post('/linias-maritimas', [LiniaTransportMaritimController::class, 'store']);
+Route::get('/linias-maritimas/{liniaTransportMaritim}', [LiniaTransportMaritimController::class, 'show']);
+Route::put('/linias-maritimas/{liniaTransportMaritim}', [LiniaTransportMaritimController::class, 'update']);
+Route::delete('/linias-maritimas/{liniaTransportMaritim}', [LiniaTransportMaritimController::class, 'destroy']);
 });

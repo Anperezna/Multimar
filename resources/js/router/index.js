@@ -13,6 +13,7 @@ import SolicitudOferta from '@/pages/SolicitudOferta.vue';
 import Ofertas from '@/pages/Ofertas.vue';
 import DetalleEnvio from '@/pages/DetalleEnvio.vue';
 import Chatbot from '@/pages/Chatbot.vue';
+import LiniasMaritimas from '@/pages/LiniasMaritimas.vue';
 
 
 const routes = [
@@ -64,6 +65,10 @@ const routes = [
     {
         path: '/chatbot',
         component: Chatbot,
+    },
+    {
+        path: '/linias-maritimas',
+        component: LiniasMaritimas,
     }
 ];
 

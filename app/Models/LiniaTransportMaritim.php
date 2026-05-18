@@ -30,4 +30,10 @@ class LiniaTransportMaritim extends Model
     {
         return $this->hasMany(Oferta::class, 'linia_transport_maritim_id');
     }
+
+    public function ports()
+    {
+        return $this->belongsToMany(Port::class, 'liniasmaritim_ports', 'linia_transport_maritim_id', 'port_id')
+            ->withPivot('nom_linia_transport_maritim');
+    }
 }
