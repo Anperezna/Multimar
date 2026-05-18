@@ -12,30 +12,41 @@ class ChatbotController extends Controller
     public function message(Request $request)
     {
         $validated = $request->validate([
-            'message' => ['required', 'string', 'max:2000'],
+            'message' => ['nullable', 'string', 'max:2000'],
+            'text' => ['nullable', 'string', 'max:2000'],
+            'sessionId' => ['nullable', 'string', 'max:255'],
         ]);
 
         $userId = $request->user()?->id;
+        $message = trim((string) ($validated['message'] ?? $validated['text'] ?? ''));
+
+        if ($message === '') {
+            return response()->json([
+                'reply' => 'Falta el mensaje del usuario.',
+            ], 422);
+        }
+
         $provider = config('services.chatbot.provider', 'n8n');
         $systemPrompt = 'Eres un asistente de logistica maritima para la plataforma Multimar. Responde en espanol, de forma clara y breve.';
+        $sessionId = $validated['sessionId'] ?? ($userId ? "user-{$userId}" : (string) $request->ip());
 
         try {
             if ($provider === 'n8n') {
-                return $this->sendToN8n($userId, $validated['message'], $systemPrompt);
+                return $this->sendToN8n($userId, $message, $systemPrompt, $sessionId);
             }
 
             if ($provider === 'ollama') {
-                return $this->sendToOllama($userId, $validated['message'], $systemPrompt);
+                return $this->sendToOllama($userId, $message, $systemPrompt);
             }
 
-            $this->persistMessage($userId, $provider, null, $validated['message'], null, 'error', 'Proveedor no configurado');
+            $this->persistMessageSafely($userId, $provider, null, $message, null, 'error', 'Proveedor no configurado');
 
             return response()->json([
                 'reply' => 'No hay un proveedor de chatbot configurado. Usa CHATBOT_PROVIDER=n8n u CHATBOT_PROVIDER=ollama en tu .env.',
             ], 422);
         } catch (Throwable $e) {
             report($e);
-            $this->persistMessageSafely($userId, $provider, null, $validated['message'], null, 'error', $e->getMessage());
+            $this->persistMessageSafely($userId, $provider, null, $message, null, 'error', $e->getMessage());
 
             return response()->json([
                 'reply' => 'El servicio del chatbot fallo de forma inesperada. Revisa logs y configuracion del proveedor.',
@@ -43,27 +54,30 @@ class ChatbotController extends Controller
         }
     }
 
-    private function sendToN8n(?int $userId, string $message, string $systemPrompt)
+    private function sendToN8n(?int $userId, string $message, string $systemPrompt, string $sessionId)
     {
         try {
             $webhookUrl = config('services.chatbot.n8n_webhook_url');
 
             if (!$webhookUrl) {
-                $this->persistMessage($userId, 'n8n', null, $message, null, 'error', 'N8N_CHAT_WEBHOOK_URL no configurado');
+                $this->persistMessageSafely($userId, 'n8n', null, $message, null, 'error', 'N8N_CHAT_WEBHOOK_URL no configurado');
 
                 return response()->json([
                     'reply' => 'Falta configurar N8N_CHAT_WEBHOOK_URL en tu .env.',
                 ], 422);
             }
 
-            $response = Http::timeout(60)->post($webhookUrl, [
+            $response = Http::timeout(60)->acceptJson()->post($webhookUrl, [
+                'text' => $message,
                 'message' => $message,
+                'sessionId' => $sessionId,
+                'userId' => $userId,
                 'systemPrompt' => $systemPrompt,
             ]);
 
             if ($response->failed()) {
                 $error = $response->json('message') ?? $response->body();
-                $this->persistMessage($userId, 'n8n', null, $message, null, 'error', is_string($error) ? $error : 'Error en llamada a N8N');
+                $this->persistMessageSafely($userId, 'n8n', null, $message, null, 'error', is_string($error) ? $error : 'Error en llamada a N8N');
 
                 return response()->json([
                     'reply' => 'N8N no respondio correctamente. Revisa tu workflow y el webhook.',
@@ -77,7 +91,7 @@ class ChatbotController extends Controller
                 ?? $response->body();
 
             $normalizedReply = is_string($reply) && trim($reply) !== '' ? $reply : 'N8N devolvio una respuesta vacia.';
-            $this->persistMessage($userId, 'n8n', null, $message, $normalizedReply, 'ok', null);
+            $this->persistMessageSafely($userId, 'n8n', null, $message, $normalizedReply, 'ok', null);
 
             return response()->json([
                 'reply' => $normalizedReply,
@@ -115,7 +129,7 @@ class ChatbotController extends Controller
 
             if ($response->failed()) {
                 $error = $response->json('error') ?? $response->body();
-                $this->persistMessage($userId, 'ollama', $model, $message, null, 'error', is_string($error) ? $error : 'Error en llamada a Ollama');
+                $this->persistMessageSafely($userId, 'ollama', $model, $message, null, 'error', is_string($error) ? $error : 'Error en llamada a Ollama');
 
                 return response()->json([
                     'reply' => 'Ollama no respondio correctamente. Revisa que el contenedor este activo y el modelo descargado.',
@@ -129,7 +143,7 @@ class ChatbotController extends Controller
                 ?? $response->body();
 
             $normalizedReply = is_string($reply) && trim($reply) !== '' ? $reply : 'Ollama devolvio una respuesta vacia.';
-            $this->persistMessage($userId, 'ollama', $model, $message, $normalizedReply, 'ok', null);
+            $this->persistMessageSafely($userId, 'ollama', $model, $message, $normalizedReply, 'ok', null);
 
             return response()->json([
                 'reply' => $normalizedReply,

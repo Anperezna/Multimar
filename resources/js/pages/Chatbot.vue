@@ -48,7 +48,7 @@
 </template>
 
 <script setup>
-import { nextTick, ref } from 'vue';
+import { nextTick, onMounted, ref } from 'vue';
 import Navbar from '@/components/Navbar.vue';
 import Input from '@/components/Input.vue';
 import api from '@/lib/api';
@@ -57,6 +57,26 @@ import backIcon from '../../../public/icons_multimar/icons-simex/compartidos/lig
 const input = ref('');
 const isLoading = ref(false);
 const messagesContainer = ref(null);
+const sessionStorageKey = 'multimar-chatbot-session-id';
+const sessionId = ref('');
+
+const createSessionId = () => {
+    if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+        return crypto.randomUUID();
+    }
+
+    return `chat-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+};
+
+onMounted(() => {
+    if (typeof window === 'undefined') {
+        return;
+    }
+
+    sessionId.value = window.localStorage.getItem(sessionStorageKey) || createSessionId();
+    window.localStorage.setItem(sessionStorageKey, sessionId.value);
+});
+
 const messages = ref([
     {
         role: 'assistant',
@@ -74,6 +94,12 @@ const scrollToBottom = async () => {
 
 const sendMessage = async () => {
     const text = input.value.trim();
+    const currentSessionId = sessionId.value || createSessionId();
+
+    if (!sessionId.value && typeof window !== 'undefined') {
+        sessionId.value = currentSessionId;
+        window.localStorage.setItem(sessionStorageKey, currentSessionId);
+    }
 
     if (!text || isLoading.value) {
         return;
@@ -86,15 +112,18 @@ const sendMessage = async () => {
 
     try {
         const { data } = await api.post('/chatbot/message', {
+            text,
             message: text,
+            sessionId: currentSessionId,
         });
 
         messages.value.push({
             role: 'assistant',
-            content: data?.reply || 'No recibi respuesta del asistente.',
+            content: data?.reply || data?.message || data?.output || 'No recibi respuesta del asistente.',
         });
     } catch (error) {
         const serverMessage =
+            error?.response?.data?.message ||
             error?.response?.data?.reply ||
             error?.response?.data?.error ||
             '';
