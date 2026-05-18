@@ -12,6 +12,7 @@ use App\Http\Controllers\TipusFluxeController;
 use App\Http\Controllers\TipusIncotermController;
 use App\Http\Controllers\NotificacionController;
 use App\Http\Controllers\ChatbotController;
+use App\Http\Controllers\SupersetDashboardController;
 use App\Http\Controllers\TrackingStepController;
 use Illuminate\Support\Facades\Route;
 
@@ -75,6 +76,7 @@ Route::patch('/notificaciones/{id}/read', [NotificacionController::class, 'markA
 Route::delete('/notificaciones/{id}', [NotificacionController::class, 'deleteNotification']);
 Route::get('/notificaciones/unread-count', [NotificacionController::class, 'getUnreadCount']);
 Route::post('/chatbot/message', [ChatbotController::class, 'message']);
+Route::get('/superset/dashboards', [SupersetDashboardController::class, 'index']);
 
 Route::post('/usuaris', [UsuariController::class, 'store']);
 Route::delete('/usuaris/{usuari}', [UsuariController::class, 'destroy']);
