@@ -15,14 +15,8 @@ class TrackingStepController extends Controller
      */
     public function index(Request $request)
     {
-        if ($request->filled('incoterm_id')) {
-            $steps = TrackingStep::where('incoterm_id', (int) $request->incoterm_id)
-                ->orderBy('ordre')
-                ->get();
-        } else {
-            $steps = TrackingStep::orderBy('ordre')->get();
-        }
-
+        
+        $steps = TrackingStep::all();
         return $steps;
     }
 

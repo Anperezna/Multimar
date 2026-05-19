@@ -249,27 +249,52 @@ async function cargarIncoterms() {
 // CARGAR PASOS DE UN INCOTERM
 async function cargarPasosDelIncoterm(incotermId) {
     try {
-        const respuesta = await api.get('/tracking-steps', {
-            params: { incoterm_id: incotermId }
+        const response = await api.get('/tracking-steps', {
+            params: {
+                incoterm_id: incotermId
+            }
         });
-        console.log('Respuesta completa del API:', respuesta);
-        console.log('Data del API:', respuesta.data);
-        
-        // Normalizar `activo` a booleano para que `v-model` en el checkbox funcione
-        pasosDelIncoterm.value = Array.isArray(respuesta.data)
-            ? respuesta.data.map(p => ({
-                  ...p,
-                  activo: p.activo === true || p.activo === 1 || p.activo === '1' || p.activo === 'true'
-              }))
-            : [];
-        console.log('Pasos del incoterm asignados:', pasosDelIncoterm.value);
+
+        const data = response.data;
+
+        pasosDelIncoterm.value = [];
+
+        if (Array.isArray(data)) {
+            for (const paso of data) {
+                pasosDelIncoterm.value.push(normalizarPaso(paso));
+            }
+        }
+
     } catch (error) {
         console.error('Error al cargar pasos:', error);
-        console.error('Error response:', error.response?.data);
-        console.error('Error status:', error.response?.status);
-        console.error('Error message:', error.message);
-        mostrarMensaje('No se pudieron cargar los pasos.', true);
+
+        let mensaje = 'No se pudieron cargar los pasos.';
+
+        if (error.response && error.response.data) {
+            mensaje = error.response.data;
+        }
+
+        mostrarMensaje(mensaje, true);
     }
+}
+
+function normalizarPaso(paso) {
+    return {
+        id: paso.id,
+        nom: paso.nom,
+        ordre: paso.ordre,
+        incoterm_id: paso.incoterm_id,
+        activo: convertirABoolean(paso.activo)
+    };
+}
+
+function convertirABoolean(valor) {
+    return (
+        valor === true ||
+        valor === 1 ||
+        valor === '1' ||
+        valor === 'true'
+    );
 }
 
 // SELECCIONAR INCOTERM
@@ -382,7 +407,7 @@ async function abrirFormularioEditarIncoterm(incoterm) {
 
     try {
         const { data } = await api.get(`/incoterms/${incoterm.id}`);
-        const tipus = data?.tipusIncoterm || data?.tipus || {};
+        const tipus = data?.tipusIncoterm || data?.tipus;
 
         incotermEditando.value = {
             id: incoterm.id,
@@ -468,6 +493,7 @@ async function editarIncoterm() {
 
 // CREAR NUEVO PASO
 async function crearPaso() {
+
     if (!nuevoPaso.value.nom.trim()) {
         mostrarMensaje('El nombre del paso es obligatorio.', true);
         return;
@@ -481,7 +507,14 @@ async function crearPaso() {
     guardando.value = true;
 
     try {
-        const maxOrden = Math.max(...pasosDelIncoterm.value.map(p => p.ordre), 0);
+
+        let maxOrden = 0;
+
+        for (const paso of pasosDelIncoterm.value) {
+            if (paso.ordre > maxOrden) {
+                maxOrden = paso.ordre;
+            }
+        }
 
         const respuesta = await api.post('/tracking-steps', {
             nom: nuevoPaso.value.nom,
@@ -489,22 +522,47 @@ async function crearPaso() {
             ordre: maxOrden + 1
         });
 
-        // Normalizar el paso creado (activo puede venir como '1'/'0')
+        const data = respuesta.data;
+
         const pasoCreado = {
-            ...respuesta.data,
-            activo: respuesta.data.activo === true || respuesta.data.activo === 1 || respuesta.data.activo === '1' || respuesta.data.activo === 'true'
+            id: data.id,
+            nom: data.nom,
+            ordre: data.ordre,
+            incoterm_id: data.incoterm_id,
+            activo:
+                data.activo === true ||
+                data.activo === 1 ||
+                data.activo === '1' ||
+                data.activo === 'true'
         };
+
         pasosDelIncoterm.value.push(pasoCreado);
+
         nuevoPaso.value.nom = '';
+
         mostrarFormularioPaso.value = false;
+
         mostrarMensaje('Paso creado correctamente.', false);
+
     } catch (error) {
-        mostrarMensaje(
-            error?.response?.data?.message || 'No se pudo crear el paso.',
-            true
-        );
+
+        let mensaje = 'No se pudo crear el paso.';
+
+        if (
+            error &&
+            error.response &&
+            error.response.data &&
+            error.response.data.message
+        ) {
+            mensaje = error.response.data.message;
+        }
+
+        mostrarMensaje(mensaje, true);
+
         console.error(error);
+
     } finally {
+
         guardando.value = false;
     }
 }
