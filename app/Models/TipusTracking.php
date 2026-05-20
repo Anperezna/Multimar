@@ -16,13 +16,17 @@ class TipusTracking extends Model
     public $incrementing = true;
 
     protected $fillable = [
-        'id',
-        'tipus_nom',
-        'tracking_steps_id',
+        'tipus_incoterm_id',
+        'tracking_step_id',
     ];
+
+    public function tipusIncoterm()
+    {
+        return $this->belongsTo(TipusIncoterm::class, 'tipus_incoterm_id');
+    }
 
     public function trackingStep()
     {
-        return $this->belongsTo(TrackingStep::class, 'tracking_steps_id');
+        return $this->belongsTo(TrackingStep::class, 'tracking_step_id');
     }
 }

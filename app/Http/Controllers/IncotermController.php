@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Incoterm;
 use App\Models\Solicitud;
+use App\Models\TrackingStep;
 use App\Models\TipusIncoterm;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -27,29 +28,81 @@ class IncotermController extends Controller
         DB::beginTransaction();
 
         try {
-            $tipusIncotermId = $request->input('tipus_inconterm_id');
+            $codi = trim((string) $request->input('codi', ''));
+            $nom = trim((string) $request->input('nom', ''));
+            $tipusIncotermId = null;
+            
+            if (!empty($request->input('tipus_incoterm_id'))) {
+                $tipusIncotermId = (int) $request->input('tipus_incoterm_id');
+            } elseif (!empty($request->input('tipus_inconterm_id'))) {
+                $tipusIncotermId = (int) $request->input('tipus_inconterm_id');
+            }
 
-            if ($request->input('nom') !== null && $request->input('codi') !== null) {
-                $tipusIncoterm = new TipusIncoterm();
-                $tipusIncoterm->nom = $request->input('nom');
-                $tipusIncoterm->codi = $request->input('codi');
-                $tipusIncoterm->save();
+            if ($tipusIncotermId !== null && ! TipusIncoterm::find($tipusIncotermId)) {
+                $tipusIncotermId = null;
+            }
+
+            if ($tipusIncotermId === null && ($codi !== '' || $nom !== '')) {
+                $consultaTipusIncoterm = TipusIncoterm::where('id', '>', 0);
+                if ($codi !== '') {
+                    $consultaTipusIncoterm->where('codi', $codi);
+                }
+                if ($nom !== '') {
+                    $consultaTipusIncoterm->where('nom', $nom);
+                }
+                $tipusIncotermExistente = $consultaTipusIncoterm->first();
+
+                $tipusIncotermId = $tipusIncotermExistente?->id;
+            }
+
+            if ($tipusIncotermId === null && $codi !== '' && $nom !== '') {
+                $tipusIncoterm = TipusIncoterm::where('codi', $codi)
+                    ->where('nom', $nom)
+                    ->first();
+
+                if (! $tipusIncoterm) {
+                    $tipusIncoterm = new TipusIncoterm();
+                    $tipusIncoterm->codi = $codi;
+                    $tipusIncoterm->nom = $nom;
+                    $tipusIncoterm->save();
+                }
 
                 $tipusIncotermId = $tipusIncoterm->id;
             }
 
+            if ($tipusIncotermId === null) {
+                throw new \Exception(Utilitat::errorMessage(1499), 1499);
+            }
+
+            $tipusIncoterm = TipusIncoterm::find($tipusIncotermId);
+            if (! $tipusIncoterm) {
+                throw new \Exception(Utilitat::errorMessage(1500), 1500);
+            }
+
             $incoterm = new Incoterm();
             $incoterm->tipus_inconterm_id = $tipusIncotermId;
-            $incoterm->tracking_steps_id = $request->tracking_steps_id;
+            $incoterm->tracking_steps_id = null;
             $incoterm->save();
 
-            if ($incoterm->tracking_steps_id) {
-                $step = TrackingStep::find($incoterm->tracking_steps_id);
-                if ($step) {
-                    $step->incoterm_id = $incoterm->id;
-                    $step->save();
-                }
+            $defaultSteps = TrackingStep::orderBy('ordre')
+                ->orderBy('id')
+                ->get();
+
+            if ($defaultSteps->isEmpty()) {
+                throw new \Exception(Utilitat::errorMessage(1502), 1502);
             }
+
+            $idsPasosPorDefecto = $defaultSteps->pluck('id')->all();
+            $tipusIncoterm->trackingSteps()->syncWithoutDetaching($idsPasosPorDefecto);
+
+            $firstStepId = $this->obtenerPrimerPasoIdParaTipoIncoterm($tipusIncoterm->id);
+
+            if ($firstStepId === null) {
+                throw new \Exception(Utilitat::errorMessage(1501), 1501);
+            }
+
+            $incoterm->tracking_steps_id = $firstStepId;
+            $incoterm->save();
 
             DB::commit();
 
@@ -65,14 +118,25 @@ class IncotermController extends Controller
      */
     public function show(Incoterm $incoterm)
     {
-        // Cargar relaciones necesarias y ordenar trackingSteps por 'ordre'
-        $incoterm->load([
-            'tipusIncoterm',
-            'trackingStep',
-            'trackingSteps' => function ($q) {
-                $q->orderBy('ordre');
-            },
-        ]);
+        $incoterm = Incoterm::with(['tipusIncoterm', 'trackingStep'])->find($incoterm->id);
+        $tipusIncoterm = $incoterm?->tipusIncoterm;
+
+        $trackingSteps = collect();
+        if ($tipusIncoterm !== null) {
+            $trackingSteps = $tipusIncoterm->trackingSteps()
+            ->orderBy('ordre')
+            ->orderBy('id')
+            ->get();
+
+            if ($trackingSteps->isEmpty()) {
+                $defaultSteps = TrackingStep::orderBy('ordre')->orderBy('id')->get();
+                $idsPasosPorDefecto = $defaultSteps->pluck('id')->all();
+                $tipusIncoterm->trackingSteps()->syncWithoutDetaching($idsPasosPorDefecto);
+                $trackingSteps = $tipusIncoterm->trackingSteps()->orderBy('ordre')->orderBy('id')->get();
+            }
+        }
+
+        $incoterm->tracking_steps = $trackingSteps;
 
         return $incoterm;
     }
@@ -85,20 +149,60 @@ class IncotermController extends Controller
         DB::beginTransaction();
 
         try {
-            if ($request->input('nom') !== null && $request->input('codi') !== null) {
-                $tipusIncoterm = $incoterm->tipusIncoterm;
+            $incomingTipusId = null;
+            if (!empty($request->input('tipus_incoterm_id'))) {
+                $incomingTipusId = (int) $request->input('tipus_incoterm_id');
+            } elseif (!empty($request->input('tipus_inconterm_id'))) {
+                $incomingTipusId = (int) $request->input('tipus_inconterm_id');
+            }
 
+            if ($incomingTipusId === null) {
+                $codigoActualizado = trim((string) $request->input('codi', ''));
+                $nombreActualizado = trim((string) $request->input('nom', ''));
+
+                if ($codigoActualizado !== '' || $nombreActualizado !== '') {
+                    $consultaTipoPorTexto = TipusIncoterm::where('id', '>', 0);
+                    if ($codigoActualizado !== '') {
+                        $consultaTipoPorTexto->where('codi', $codigoActualizado);
+                    }
+                    if ($nombreActualizado !== '') {
+                        $consultaTipoPorTexto->where('nom', $nombreActualizado);
+                    }
+                    $tipusIncotermByText = $consultaTipoPorTexto->first();
+
+                    $incomingTipusId = $tipusIncotermByText?->id;
+                }
+            }
+
+            if ($incomingTipusId !== null) {
+                $tipusIncoterm = TipusIncoterm::find($incomingTipusId);
                 if (! $tipusIncoterm) {
-                    $tipusIncoterm = new TipusIncoterm();
+                    throw new \Exception(Utilitat::errorMessage(1500), 1500);
                 }
 
-                $tipusIncoterm->nom = $request->input('nom');
-                $tipusIncoterm->codi = $request->input('codi');
-                $tipusIncoterm->save();
+                $firstStepId = $this->obtenerPrimerPasoIdParaTipoIncoterm($tipusIncoterm->id);
+
+                if ($firstStepId === null) {
+                    $defaultSteps = TrackingStep::orderBy('ordre')
+                        ->orderBy('id')
+                        ->get();
+
+                    if ($defaultSteps->isEmpty()) {
+                        throw new \Exception(Utilitat::errorMessage(1502), 1502);
+                    }
+
+                    $idsPasosPorDefecto = $defaultSteps->pluck('id')->all();
+                    $tipusIncoterm->trackingSteps()->syncWithoutDetaching($idsPasosPorDefecto);
+
+                    $firstStepId = $this->obtenerPrimerPasoIdParaTipoIncoterm($tipusIncoterm->id);
+                }
+
+                if ($firstStepId === null) {
+                    throw new \Exception(Utilitat::errorMessage(1501), 1501);
+                }
 
                 $incoterm->tipus_inconterm_id = $tipusIncoterm->id;
-            } elseif ($request->has('tipus_inconterm_id')) {
-                $incoterm->tipus_inconterm_id = $request->tipus_inconterm_id;
+                $incoterm->tracking_steps_id = $firstStepId;
             }
 
             $incoterm->save();
@@ -123,10 +227,15 @@ class IncotermController extends Controller
             $tieneSolicitudes = Solicitud::where('incoterm_id', $incoterm->id)->exists();
 
             if ($tieneSolicitudes) {
-                throw new \Exception('No se puede eliminar este incoterm porque hay solicitudes que lo utilizan.', 1494);
+                throw new \Exception(Utilitat::errorMessage(1494), 1494);
             }
 
+            $tipusIncoterm = $incoterm->tipusIncoterm;
             $incoterm->delete();
+
+            if ($tipusIncoterm) {
+                $tipusIncoterm->delete();
+            }
 
             DB::commit();
 
@@ -137,11 +246,16 @@ class IncotermController extends Controller
         }
     }
 
-    /**
-     * Alias para ver incoterms (reemplaza a index para uso administrativo).
-     */
-    public function verIncoterms()
+    private function obtenerPrimerPasoIdParaTipoIncoterm(int $tipusIncotermId): ?int
     {
-        return $this->index();
+        $tipusIncoterm = TipusIncoterm::find($tipusIncotermId);
+        if (! $tipusIncoterm) {
+            return null;
+        }
+
+        $firstStep = $tipusIncoterm->trackingSteps()->orderBy('ordre')->orderBy('id')->first();
+
+        return $firstStep?->id;
     }
+
 }

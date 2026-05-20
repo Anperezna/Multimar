@@ -26,4 +26,21 @@ class TipusIncoterm extends Model
     {
         return $this->hasMany(Incoterm::class, 'tipus_inconterm_id');
     }
+
+    public function tipusTrackings()
+    {
+        return $this->hasMany(TipusTracking::class, 'tipus_incoterm_id');
+    }
+
+    public function trackingSteps()
+    {
+        return $this->belongsToMany(
+            TrackingStep::class,
+            'tipus_tracking',
+            'tipus_incoterm_id',
+            'tracking_step_id',
+            'id',
+            'id'
+        )->withPivot('id');
+    }
 }

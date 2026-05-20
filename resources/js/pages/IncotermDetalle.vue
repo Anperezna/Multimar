@@ -4,7 +4,7 @@
 
         <main class="detalle-layout">
             <header class="detalle-header">
-                <button class="back-btn" @click="volverListado">← Volver</button>
+                <Botones class="back-btn" @click="volverListado">Volver</Botones>
                 <h1>Detalle del Incoterm</h1>
             </header>
 
@@ -21,41 +21,42 @@
                 <div class="pasos">
                     <h3>Pasos de seguimiento</h3>
 
-                    <div v-if="trackingSteps.length === 0">
+                    <div v-if="sinTrackingSteps">
                         <p>No hay pasos de seguimiento disponibles.</p>
                     </div>
 
                     <ul v-else>
+                        <!-- Render con v-for: un item por tracking step -->
                         <li v-for="step in trackingSteps" :key="step.id" class="paso-item">
                             <div class="paso-info">
                                 <span class="paso-orden">{{ step.ordre }}</span>
                                 <span class="paso-nombre">{{ step.nom }}</span>
                             </div>
                             <div class="paso-actions">
-                                <button
+                                <Botones
                                     class="tertiary-btn"
                                     type="button"
                                     @click="abrirModalEditarPaso(step)"
                                     :disabled="isUpdating"
                                 >
                                     Editar
-                                </button>
-                                <button
+                                </Botones>
+                                <Botones
                                     class="danger-btn"
                                     type="button"
                                     @click="eliminarPaso(step)"
                                     :disabled="isDeletingId === step.id"
                                 >
                                     {{ isDeletingId === step.id ? 'Eliminando...' : 'Eliminar' }}
-                                </button>
+                                </Botones>
                             </div>
                         </li>
                     </ul>
 
                     <div class="pasos-actions">
-                        <button class="primary-btn" @click="abrirModalNuevoPaso" :disabled="isCreating">
+                        <Botones class="primary-btn" @click="abrirModalNuevoPaso" :disabled="isCreating">
                             {{ isCreating ? 'Creando...' : '+ Añadir paso' }}
-                        </button>
+                        </Botones>
                     </div>
                 </div>
             </section>
@@ -67,16 +68,16 @@
                 <form @submit.prevent="crearPaso">
                     <div class="field">
                         <label>Nombre</label>
-                        <input v-model="nuevoPaso.nom" required />
+                        <Input v-model="nuevoPaso.nom" inputClass="field-input" required />
                     </div>
                     <div class="field">
                         <label>Orden</label>
-                        <input type="number" v-model.number="nuevoPaso.ordre" required />
+                        <Input type="number" v-model.number="nuevoPaso.ordre" inputClass="field-input" required />
                     </div>
 
                     <div class="modal-actions">
-                        <button type="button" class="secondary-btn" @click="cerrarModal">Cancelar</button>
-                        <button type="submit" class="primary-btn">Crear paso</button>
+                        <Botones type="button" class="secondary-btn" @click="cerrarModal">Cancelar</Botones>
+                        <Botones type="submit" class="primary-btn">Crear paso</Botones>
                     </div>
                 </form>
             </div>
@@ -88,18 +89,18 @@
                 <form @submit.prevent="actualizarPaso">
                     <div class="field">
                         <label>Nombre</label>
-                        <input v-model="pasoEditando.nom" required />
+                        <Input v-model="pasoEditando.nom" inputClass="field-input" required />
                     </div>
                     <div class="field">
                         <label>Orden</label>
-                        <input type="number" v-model.number="pasoEditando.ordre" required />
+                        <Input type="number" v-model.number="pasoEditando.ordre" inputClass="field-input" required />
                     </div>
 
                     <div class="modal-actions">
-                        <button type="button" class="secondary-btn" @click="cerrarModalEditar">Cancelar</button>
-                        <button type="submit" class="primary-btn" :disabled="isUpdating">
+                        <Botones type="button" class="secondary-btn" @click="cerrarModalEditar">Cancelar</Botones>
+                        <Botones type="submit" class="primary-btn" :disabled="isUpdating">
                             {{ isUpdating ? 'Guardando...' : 'Guardar cambios' }}
-                        </button>
+                        </Botones>
                     </div>
                 </form>
             </div>
@@ -108,9 +109,11 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { computed, ref, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import Navbar from '@/components/Navbar.vue';
+import Botones from '@/components/Botones.vue';
+import Input from '@/components/Input.vue';
 import api from '@/lib/api';
 
 const route = useRoute();
@@ -119,6 +122,7 @@ const incotermId = Number(route.params.id);
 
 const incoterm = ref({});
 const trackingSteps = ref([]);
+const sinTrackingSteps = computed(() => trackingSteps.value.length === 0);
 const isLoading = ref(true);
 const isCreating = ref(false);
 const isUpdating = ref(false);
@@ -270,10 +274,7 @@ onMounted(() => {
 <style lang="scss" scoped>
 .detalle-page {
     min-height: 100vh;
-    background:
-        radial-gradient(circle at top left, rgba(14, 165, 233, 0.16), transparent 28%),
-        radial-gradient(circle at right 20%, rgba(59, 130, 246, 0.12), transparent 32%),
-        #eef4fb;
+    background: #f5f5f5;
 }
 
 .detalle-layout {
@@ -290,21 +291,20 @@ onMounted(() => {
 }
 
 .back-btn {
-    background: rgba(255, 255, 255, 0.92);
-    border: 1px solid #d8e3ef;
-    border-radius: 12px;
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
     padding: 10px 16px;
     cursor: pointer;
     font-size: 1rem;
     color: #10243f;
     font-weight: 500;
     transition: all 0.2s ease;
-    box-shadow: 0 4px 12px rgba(16, 36, 63, 0.08);
+    box-shadow: none;
 
     &:hover {
         background: rgba(255, 255, 255, 0.98);
-        border-color: #0ea5e9;
-        box-shadow: 0 6px 16px rgba(14, 165, 233, 0.12);
+        border-color: #0091d5;
     }
 
     &:active {
@@ -320,11 +320,10 @@ onMounted(() => {
 }
 
 .detalle-content {
-    background: rgba(255, 255, 255, 0.92);
-    border: 1px solid #d8e3ef;
-    border-radius: 20px;
-    box-shadow: 0 20px 40px rgba(16, 36, 63, 0.08);
-    backdrop-filter: blur(8px);
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
     padding: 28px;
 }
 
@@ -422,23 +421,18 @@ onMounted(() => {
 }
 
 .primary-btn {
-    background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
+    background: #0091d5;
     color: white;
-    border: none;
+    border: 1px solid #0091d5;
     padding: 10px 20px;
-    border-radius: 12px;
+    border-radius: 6px;
     font-weight: 600;
     cursor: pointer;
     transition: all 0.2s ease;
-    box-shadow: 0 4px 12px rgba(14, 165, 233, 0.3);
+    box-shadow: none;
 
     &:hover:not(:disabled) {
-        transform: translateY(-2px);
-        box-shadow: 0 6px 20px rgba(14, 165, 233, 0.4);
-    }
-
-    &:active:not(:disabled) {
-        transform: translateY(0);
+        background: #0078b1;
     }
 
     &:disabled {
@@ -448,9 +442,9 @@ onMounted(() => {
 }
 
 .secondary-btn {
-    background: rgba(255, 255, 255, 0.92);
+    background: #fff;
     color: #10243f;
-    border: 1px solid #d8e3ef;
+    border: 1px solid #e5e7eb;
     padding: 10px 20px;
     border-radius: 12px;
     font-weight: 600;
@@ -459,14 +453,14 @@ onMounted(() => {
 
     &:hover {
         background: rgba(255, 255, 255, 0.98);
-        border-color: #0ea5e9;
+        border-color: #0091d5;
     }
 }
 
 .tertiary-btn {
-    background: rgba(255, 255, 255, 0.95);
-    color: #0b5f87;
-    border: 1px solid #cfe4f5;
+    background: #fff;
+    color: #1b2a4a;
+    border: 1px solid #e5e7eb;
     padding: 8px 12px;
     border-radius: 10px;
     font-weight: 600;
@@ -474,8 +468,8 @@ onMounted(() => {
     transition: all 0.2s ease;
 
     &:hover:not(:disabled) {
-        border-color: #0ea5e9;
-        box-shadow: 0 4px 10px rgba(14, 165, 233, 0.12);
+        border-color: #0091d5;
+        box-shadow: none;
     }
 
     &:disabled {
@@ -554,11 +548,11 @@ onMounted(() => {
     font-size: 0.95rem;
 }
 
-.field input {
+.field-input {
     width: 100%;
     padding: 10px 12px;
-    border: 1px solid #d8e3ef;
-    border-radius: 10px;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
     font-size: 1rem;
     color: #10243f;
     transition: all 0.2s ease;
@@ -566,8 +560,8 @@ onMounted(() => {
 
     &:focus {
         outline: none;
-        border-color: #0ea5e9;
-        box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.1);
+        border-color: #0091d5;
+        box-shadow: 0 0 0 3px rgba(0, 145, 213, 0.1);
     }
 
     &:hover {

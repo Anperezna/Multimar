@@ -32,11 +32,6 @@ class Incoterm extends Model
         return $this->belongsTo(TrackingStep::class, 'tracking_steps_id');
     }
 
-    public function trackingSteps()
-    {
-        return $this->hasMany(TrackingStep::class, 'incoterm_id');
-    }
-
     public function solicituds()
     {
         return $this->hasMany(Solicitud::class, 'incoterm_id');

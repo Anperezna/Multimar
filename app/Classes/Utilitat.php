@@ -69,6 +69,21 @@ class Utilitat
                 case 1498:
                     $missatge = '1498 - Paso de tracking no encontrado.';
                     break;
+                case 1499:
+                    $missatge = '1499 - Debes indicar un tipo de incoterm existente.';
+                    break;
+                case 1500:
+                    $missatge = '1500 - El tipo de incoterm indicado no existe en BBDD.';
+                    break;
+                case 1501:
+                    $missatge = '1501 - El tipo de incoterm no tiene pasos configurados en tipus_tracking.';
+                    break;
+                case 1502:
+                    $missatge = '1502 - No hay pasos por defecto en tracking_steps.';
+                    break;
+                case 1503:
+                    $missatge = '1503 - No se encontró el tipo de incoterm para actualizar pasos.';
+                    break;
                 case 1049:
                     $missatge = '1049 - Base de dades desconeguda';
                     break;
