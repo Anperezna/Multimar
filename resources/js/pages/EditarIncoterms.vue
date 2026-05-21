@@ -91,11 +91,12 @@
                 </div>
 
                 <form @submit.prevent="guardarIncoterm">
-                    <FormularioNombreIncoterm 
-                        :codigoActual="formCodi"
-                        :nombreActual="formNom"
+                    
+                    <IncotermDetalle 
+                        :codigo="formCodi"
+                        :nombre="formNom"
                         @actualizar-codigo="formCodi = $event.trim()"
-                        @actualizar-nombre="formNom = $event.trim()" 
+                        @actualizar-nombre="formNom = $event.trim()"
                     />
 
                     <ListadoPasosCheckbox 
@@ -121,8 +122,8 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue';
 import Navbar from '@/components/Navbar.vue';
-import FormularioNombreIncoterm from '@/components/FormularioNombreIncoterm.vue';
-import ListadoPasosCheckbox from '@/components/ListadoPasosCheckbox.vue'; // 👈 Asegúrate de que la ruta sea correcta
+import IncotermDetalle from '@/components/IncotermDetalle.vue'; 
+import ListadoPasosCheckbox from '@/components/ListadoPasosCheckbox.vue';
 import Botones from '@/components/Botones.vue';
 import api from '@/lib/api';
 
@@ -241,7 +242,9 @@ const guardarIncoterm = async () => {
     }
 };
 
-const eliminarIncoterm = async (id) => {   
+const eliminarIncoterm = async (id) => {
+    if (!window.confirm('¿Seguro que deseas eliminar este incoterm? Se desvincularán todos sus pasos.')) return;
+    
     try {
         await api.delete(`/incoterms/${id}`);
         mostrarMensaje('Incoterm eliminado correctamente.', false);
@@ -287,7 +290,6 @@ const cerrarVisor = () => {
 </script>
 
 <style lang="scss" scoped>
-/* Conserva tus estilos originales intactos de tu hoja CSS previa */
 .pagina-edicion {
     min-height: 100vh;
     background: #f5f5f5;
@@ -309,7 +311,6 @@ const cerrarVisor = () => {
 
 .seccion-listado {
     position: relative;
-
     h1 {
         margin: 0 0 8px;
         font-size: clamp(1.8rem, 2.5vw, 2.4rem);
@@ -323,7 +324,6 @@ const cerrarVisor = () => {
     align-items: flex-start;
     gap: 16px;
     margin-bottom: 24px;
-
     p {
         margin: 0;
         color: #5b6f88;
@@ -361,9 +361,7 @@ const cerrarVisor = () => {
 }
 
 @keyframes spin {
-    to {
-        transform: rotate(360deg);
-    }
+    to { transform: rotate(360deg); }
 }
 
 .grid-tarjetas {
@@ -387,7 +385,6 @@ const cerrarVisor = () => {
 
 .cabecera-tarjeta {
     margin-bottom: 16px;
-
     .numero {
         margin: 0 0 4px;
         font-size: 0.8rem;
@@ -395,7 +392,6 @@ const cerrarVisor = () => {
         font-weight: 600;
         text-transform: uppercase;
     }
-
     h3 {
         margin: 0;
         font-size: 1.1rem;
@@ -407,7 +403,6 @@ const cerrarVisor = () => {
     display: flex;
     flex-direction: column;
     gap: 8px;
-
     .btn {
         width: 100%;
         justify-content: center;
@@ -438,7 +433,6 @@ const cerrarVisor = () => {
     margin-bottom: 20px;
     padding-bottom: 16px;
     border-bottom: 1px solid #e2eaf3;
-
     h2 {
         margin: 0;
         font-size: 1.3rem;
@@ -455,7 +449,6 @@ const cerrarVisor = () => {
     color: #5b6f88;
     font-size: 1.2rem;
     cursor: pointer;
-
     &:hover {
         background: #e2eaf3;
         color: #10243f;
@@ -498,7 +491,6 @@ const cerrarVisor = () => {
     background: #fff;
     border-radius: 10px;
     border: 1px solid #e2eaf3;
-
     &:hover {
         border-color: #0ea5e9;
         box-shadow: 0 2px 8px rgba(14, 165, 233, 0.08);
@@ -530,33 +522,6 @@ const cerrarVisor = () => {
     font-size: 0.95rem;
 }
 
-.contenedor-checkbox {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    cursor: pointer;
-    user-select: none;
-
-    input[type="checkbox"] {
-        width: 18px;
-        height: 18px;
-        cursor: pointer;
-        accent-color: #0ea5e9;
-    }
-}
-
-.texto-checkbox {
-    font-size: 0.85rem;
-    color: #5b6f88;
-    font-weight: 500;
-}
-
-.acciones-editor {
-    display: flex;
-    gap: 10px;
-    margin-bottom: 16px;
-}
-
 .btn {
     padding: 10px 16px;
     border: 1px solid transparent;
@@ -565,7 +530,6 @@ const cerrarVisor = () => {
     font-size: 0.9rem;
     cursor: pointer;
     transition: all 0.2s ease;
-
     &:disabled {
         opacity: 0.6;
         cursor: not-allowed;
@@ -588,7 +552,6 @@ const cerrarVisor = () => {
     flex: 1;
     background: #fee2e2;
     color: #b91c1c;
-
     &:hover:not(:disabled) {
         background: #fecaca;
     }
@@ -612,7 +575,6 @@ const cerrarVisor = () => {
     background: rgba(255, 255, 255, 0.9);
     color: #10243f;
     border: 1px solid #d8e3ef;
-
     &:hover:not(:disabled) {
         background: #fff;
         border-color: #0ea5e9;
@@ -637,7 +599,6 @@ const cerrarVisor = () => {
     border: 1px solid #d8e3ef;
     box-shadow: 0 28px 70px rgba(16, 36, 63, 0.22);
     padding: 22px;
-
     form {
         display: grid;
         gap: 16px;
@@ -650,7 +611,6 @@ const cerrarVisor = () => {
     justify-content: space-between;
     gap: 12px;
     margin-bottom: 18px;
-
     h2 {
         margin: 0;
         font-size: 1.25rem;
@@ -668,7 +628,6 @@ const cerrarVisor = () => {
     background: #f1f5f9;
     color: #10243f;
     border: 1px solid #d8e3ef;
-
     &:hover:not(:disabled) {
         background: #e2e8f0;
     }
@@ -682,7 +641,6 @@ const cerrarVisor = () => {
     background: #dbeafe;
     color: #1d4ed8;
     border: 1px solid #7dd3fc;
-
     &.error {
         background: #fee2e2;
         color: #991b1b;
