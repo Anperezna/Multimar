@@ -9,13 +9,8 @@
 
         <div v-else class="lista-checkboxes">
             <div v-for="paso in pasosDisponibles" :key="paso.id" class="elemento-checkbox">
-                <input
-                    :id="`paso-${paso.id}`"
-                    type="checkbox"
-                    class="checkbox"
-                    :value="paso.id"
-                    @change="manejarCambioPaso"
-                />
+                <input :id="`paso-${paso.id}`" type="checkbox" class="checkbox" :value="paso.id"
+                    :checked="pasosSeleccionados.includes(paso.id)" @change="manejarCambioPaso" />
                 <label :for="`paso-${paso.id}`" class="etiqueta-checkbox">
                     <span class="numero-paso">{{ paso.ordre }}</span>
                     <span class="nombre-paso">{{ paso.nom }}</span>
@@ -41,9 +36,9 @@ const emit = defineEmits(['actualizar-pasos']);
 
 function manejarCambioPaso(evento) {
     const pasoId = parseInt(evento.target.value, 10);
-    
+
     let pasoIdsActualizados;
-    
+
     if (evento.target.checked) {
         // Agregar el paso a la lista
         pasoIdsActualizados = [...props.pasosSeleccionados, pasoId];
@@ -61,7 +56,7 @@ function manejarCambioPaso(evento) {
     margin-bottom: 18px;
 }
 
-.campo-pasos > label {
+.campo-pasos>label {
     display: block;
     font-size: 0.9rem;
     font-weight: 700;

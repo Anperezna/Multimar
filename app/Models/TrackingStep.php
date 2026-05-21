@@ -2,27 +2,25 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class TrackingStep extends Model
 {
-    use HasFactory;
-
     protected $table = 'tracking_steps';
 
-    public $timestamps = false;
+    protected $fillable = ['nom', 'ordre'];
 
-    public $incrementing = true;
-
-    protected $fillable = [
-        'id',
-        'ordre',
-        'nom',
-    ];
-
-    public function tipusTrackings()
+    /**
+     * Relación Muchos a Muchos con TipusIncoterm a través de la pivot 'incoterms'
+     */
+    public function tipusIncoterms(): BelongsToMany
     {
-        return $this->hasMany(TipusTracking::class, 'tracking_step_id');
+        return $this->belongsToMany(
+            TipusIncoterm::class,
+            'incoterms',
+            'tracking_steps_id',
+            'tipus_inconterm_id'
+        ); // 🔥 quitamos el ->withTimestamps()
     }
 }

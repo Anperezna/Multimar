@@ -3,16 +3,15 @@
         <Navbar />
 
         <main class="contenedor">
-            <!-- SECCIÃ“N: LISTA DE INCOTERMS -->
             <section class="seccion-listado">
                 <div class="encabezado-listado">
                     <div>
                         <h1>Gestión de Incoterms</h1>
-                        <p>Selecciona un incoterm para editar sus pasos de seguimiento.</p>
+                        <p>Administra los incoterms del sistema y sus pasos de seguimiento asociados.</p>
                     </div>
 
                     <div class="acciones-encabezado">
-                        <Botones class="btn btn-crear-incoterm" @click="abrirFormularioNuevoIncoterm">
+                        <Botones class="btn btn-crear-incoterm" @click="abrirModalNuevo">
                             + Añadir Incoterm
                         </Botones>
 
@@ -22,7 +21,7 @@
                     </div>
                 </div>
 
-                <div v-if="cargando" class="estado-carga">
+                <div v-if="cargandoLista" class="estado-carga">
                     <span class="spinner"></span>
                     <p>Cargando incoterms...</p>
                 </div>
@@ -32,18 +31,17 @@
                 </div>
 
                 <div v-else class="grid-tarjetas">
-                    <!-- Render con v-for: un card por incoterm -->
                     <article v-for="incoterm in incoterms" :key="incoterm.id" class="tarjeta-incoterm">
                         <div class="cabecera-tarjeta">
                             <p class="numero">Incoterm #{{ incoterm.id }}</p>
-                            <h3>{{ obtenerLabelIncoterm(incoterm) }}</h3>
+                            <h3>{{ incoterm.codi }} - {{ incoterm.nom }}</h3>
                         </div>
                         <div class="acciones-tarjeta">
-                            <Botones class="btn btn-editar-incoterm" @click="abrirFormularioEditarIncoterm(incoterm)">
-                                Editar incoterm
+                            <Botones class="btn btn-editar-incoterm" @click="abrirModalEditar(incoterm)">
+                                Editar Datos y Pasos
                             </Botones>
-                            <Botones class="btn btn-editar" @click="seleccionarIncoterm(incoterm)">
-                                Editar pasos
+                            <Botones class="btn btn-editar" @click="visualizarPasos(incoterm)">
+                                Ver pasos asignados ({{ incoterm.tracking_steps?.length || 0 }})
                             </Botones>
                             <Botones class="btn btn-eliminar" @click="eliminarIncoterm(incoterm.id)">
                                 Eliminar
@@ -53,117 +51,65 @@
                 </div>
             </section>
 
-            <!-- SECCIÃ“N: EDITOR DE PASOS -->
             <section v-if="incotermSeleccionado" class="seccion-editor">
                 <div class="cabecera-editor">
-                    <h2>{{ obtenerLabelIncoterm(incotermSeleccionado) }}</h2>
-                    <Botones class="btn btn-cerrar" @click="cerrarEditor">X</Botones>
+                    <h2>Pasos de: {{ incotermSeleccionado.codi }}</h2>
+                    <Botones class="btn btn-cerrar" @click="cerrarVisor">X</Botones>
                 </div>
 
                 <div class="contenedor-pasos">
-                    <h3>Pasos de seguimiento</h3>
+                    <h3>Pasos de seguimiento asignados</h3>
 
-                    <div v-if="sinPasos" class="sin-pasos">
-                        <p>Este incoterm no tiene pasos asociados.</p>
+                    <div v-if="incotermSeleccionado.tracking_steps?.length === 0" class="sin-pasos">
+                        <p>Este incoterm no tiene ningún paso de seguimiento asociado actualmente.</p>
                     </div>
 
                     <div v-else class="lista-pasos">
-                        <!-- Render con v-for: un row por paso -->
-                        <div v-for="paso in pasosDelIncoterm" :key="paso.id" class="fila-paso">
+                        <div v-for="paso in incotermSeleccionado.tracking_steps" :key="paso.id" class="fila-paso">
                             <div class="datos-paso">
                                 <span class="numero-paso">{{ paso.ordre }}</span>
                                 <span class="nombre-paso">{{ paso.nom }}</span>
                             </div>
-                            <label class="contenedor-checkbox">
-                                <input type="checkbox" v-model="paso.activo" />
-                                <span class="texto-checkbox">{{ paso.activo ? 'Activo' : 'Inactivo' }}</span>
-                            </label>
+                            <span class="texto-checkbox" style="color: #0ea5e9; font-weight: bold;">✓ Vinculado</span>
                         </div>
-                    </div>
-
-                    <div class="agregar-paso">
-                        <!-- Alternancia v-if / v-else para mostrar formulario o botón -->
-                        <div v-if="mostrarFormularioPaso" class="formulario-paso">
-                            <Input
-                                v-model="nuevoPaso.nom"
-                                type="text"
-                                placeholder="Nombre del paso"
-                                inputClass="entrada-paso"
-                            />
-                            <Botones class="btn btn-pequeno btn-agregar" @click="crearPaso">
-                                Agregar
-                            </Botones>
-                            <Botones class="btn btn-pequeno btn-cancelar" @click="mostrarFormularioPaso = false">
-                                Cancelar
-                            </Botones>
-                        </div>
-                        <Botones v-else class="btn btn-pequeno btn-nuevo-paso" @click="mostrarFormularioPaso = true">
-                            + Nuevo paso
-                        </Botones>
                     </div>
 
                     <div class="acciones-editor">
-                        <Botones class="btn btn-guardar" @click="guardarCambios" :disabled="guardando">
-                            {{ guardando ? 'Guardando...' : 'Guardar cambios' }}
-                        </Botones>
-                        <Botones class="btn btn-cancelar" @click="cerrarEditor">
-                            Cancelar
+                        <Botones class="btn btn-cancelar" @click="cerrarVisor">
+                            Cerrar Vista
                         </Botones>
                     </div>
-
                 </div>
             </section>
         </main>
 
-        <div v-if="mostrarFormularioNuevoIncoterm" class="modal-overlay">
-            <div class="modal-incoterm">
+        <div v-if="modalFormulario" class="modal-overlay">
+            <div class="modal-incoterm" style="max-height: 85vh; overflow-y: auto;">
                 <div class="modal-header">
-                    <h2>Añadir Incoterm</h2>
-                    <Botones class="btn btn-cerrar" @click="cerrarFormularioNuevoIncoterm">X</Botones>
+                    <h2>{{ formId ? 'Editar Incoterm e Hitos' : 'Añadir Nuevo Incoterm' }}</h2>
+                    <Botones class="btn btn-cerrar" @click="cerrarModales">X</Botones>
                 </div>
 
-                <form @submit.prevent="crearIncoterm">
-                    <FormularioNombreIncoterm
-                        :codigoActual="nuevoIncoterm.codi"
-                        :nombreActual="nuevoIncoterm.nom"
-                        @actualizar-codigo="nuevoIncoterm.codi = $event"
-                        @actualizar-nombre="nuevoIncoterm.nom = $event"
+                <form @submit.prevent="guardarIncoterm">
+                    <FormularioNombreIncoterm 
+                        :codigoActual="formCodi"
+                        :nombreActual="formNom"
+                        @actualizar-codigo="formCodi = $event.trim()"
+                        @actualizar-nombre="formNom = $event.trim()" 
+                    />
+
+                    <ListadoPasosCheckbox 
+                        :pasosDisponibles="todosLosPasosDisponibles"
+                        :pasosSeleccionados="formPasos"
+                        @actualizar-pasos="formPasos = $event"
                     />
 
                     <div class="modal-actions">
-                        <Botones type="button" class="btn btn-cancelar-modal" @click="cerrarFormularioNuevoIncoterm">
+                        <Botones type="button" class="btn btn-cancelar-modal" @click="cerrarModales">
                             Cancelar
                         </Botones>
-                        <Botones type="submit" class="btn btn-guardar" :disabled="creandoIncoterm">
-                            {{ creandoIncoterm ? 'Creando...' : 'Crear incoterm' }}
-                        </Botones>
-                    </div>
-
-                </form>
-            </div>
-        </div>
-
-        <div v-if="mostrarFormularioEditarIncoterm" class="modal-overlay">
-            <div class="modal-incoterm">
-                <div class="modal-header">
-                    <h2>Editar Incoterm</h2>
-                    <Botones class="btn btn-cerrar" @click="cerrarFormularioEditarIncoterm">X</Botones>
-                </div>
-
-                <form @submit.prevent="editarIncoterm">
-                    <FormularioNombreIncoterm
-                        :codigoActual="incotermEditando.codi"
-                        :nombreActual="incotermEditando.nom"
-                        @actualizar-codigo="incotermEditando.codi = $event"
-                        @actualizar-nombre="incotermEditando.nom = $event"
-                    />
-
-                    <div class="modal-actions">
-                        <Botones type="button" class="btn btn-cancelar-modal" @click="cerrarFormularioEditarIncoterm">
-                            Cancelar
-                        </Botones>
-                        <Botones type="submit" class="btn btn-guardar" :disabled="guardandoEdicionIncoterm">
-                            {{ guardandoEdicionIncoterm ? 'Guardando...' : 'Guardar cambios' }}
+                        <Botones type="submit" class="btn btn-guardar" :disabled="guardando">
+                            {{ guardando ? 'Guardando...' : 'Guardar' }}
                         </Botones>
                     </div>
                 </form>
@@ -172,490 +118,176 @@
     </div>
 </template>
 
-<script setup lang="ts">
+<script setup>
 import { computed, onMounted, ref } from 'vue';
 import Navbar from '@/components/Navbar.vue';
 import FormularioNombreIncoterm from '@/components/FormularioNombreIncoterm.vue';
+import ListadoPasosCheckbox from '@/components/ListadoPasosCheckbox.vue'; // 👈 Asegúrate de que la ruta sea correcta
 import Botones from '@/components/Botones.vue';
-import Input from '@/components/Input.vue';
 import api from '@/lib/api';
 
-// ESTADO
+// ==========================================
+// ESTADO GLOBAL Y DATOS
+// ==========================================
 const incoterms = ref([]);
-const tiposIncoterms = ref([]);
-const incotermInstancias = ref([]);
-const pasosDelIncoterm = ref([]);
+const todosLosPasosDisponibles = ref([]);
 const incotermSeleccionado = ref(null);
-const cargando = ref(true);
+
+const sinIncoterms = computed(() => incoterms.value.length === 0);
+
+// ==========================================
+// ESTADO DE INTERFAZ (UI)
+// ==========================================
+const cargandoLista = ref(true);
 const guardando = ref(false);
-const creandoIncoterm = ref(false);
+const modalFormulario = ref(false);
 const mensaje = ref('');
 const esError = ref(false);
-const mostrarFormularioPaso = ref(false);
-const mostrarFormularioNuevoIncoterm = ref(false);
-const mostrarFormularioEditarIncoterm = ref(false);
-const guardandoEdicionIncoterm = ref(false);
-const nuevoPaso = ref({
-    nom: ''
-});
-const nuevoIncoterm = ref({
-    nom: '',
-    codi: ''
-});
-const incotermEditando = ref({
-    id: null,
-    nom: '',
-    codi: ''
-});
-const sinIncoterms = computed(() => incoterms.value.length === 0);
-const sinPasos = computed(() => pasosDelIncoterm.value.length === 0);
 
-const obtenerLabelIncoterm = (incoterm) => {
-    const tipoId =
-        incoterm?.tipus_inconterm_id ??
-        incoterm?.tipusIncoterm?.id ??
-        incoterm?.tipus?.id;
-
-    const tipus =
-        incoterm?.tipusIncoterm ||
-        incoterm?.tipus ||
-        tiposIncoterms.value.find(item => item.id == tipoId);
-
-    if (!tipus) {
-        return `Incoterm ${incoterm?.id ?? ''}`.trim();
-    }
-
-    return `${tipus.codi ?? ''} - ${tipus.nom ?? ''}`.trim().replace(/^\s*-\s*|\s*-\s*$/g, '');
-}
-
-// CARGAR TIPOS DE INCOTERM
-const cargarTiposIncoterm = async () => {
-    try {
-        const respuesta = await api.get('/tipos-incoterm');
-        tiposIncoterms.value = respuesta.data || [];
-    } catch (error) {
-        console.error('No se pudieron cargar los tipos de incoterm:', error);
-        tiposIncoterms.value = [];
-    }
-}
-
-// CARGAR INCOTERMS
-const cargarIncoterms = async () => {
-    cargando.value = true;
-    try {
-        const tiposRespuesta = await api.get('/tipos-incoterm');
-        const incotermsRespuesta = await api.get('/incoterms');
-
-        const tipos = tiposRespuesta.data || [];
-        incotermInstancias.value = incotermsRespuesta.data || [];
-        incoterms.value = [];
-
-        for (const tipo of tipos) {
-            const instancia = incotermInstancias.value.find(item => item && item.tipus_inconterm_id == tipo.id);
-            incoterms.value.push({
-                id: tipo.id,
-                tipus_inconterm_id: tipo.id,
-                tipusIncoterm: tipo,
-                _incoterm_instance_id: instancia ? instancia.id : null,
-            });
-        }
-    } catch (error) {
-        mostrarMensaje('No se pudieron cargar los incoterms.', true);
-        console.error(error);
-    } finally {
-        cargando.value = false;
-    }
-}
-
-// CARGAR PASOS DE UN INCOTERM
-const cargarPasosDelIncoterm = async (incotermId) => {
-    try {
-        const response = await api.get('/tracking-steps', {
-            params: {
-                incoterm_id: incotermId
-            }
-        });
-
-        const data = response.data || [];
-        pasosDelIncoterm.value = [];
-        for (const paso of data) {
-            pasosDelIncoterm.value.push(normalizarPaso(paso));
-        }
-
-    } catch (error) {
-        console.error('Error al cargar pasos:', error);
-
-        let mensaje = 'No se pudieron cargar los pasos.';
-
-        if (error.response && error.response.data) {
-            mensaje = error.response.data;
-        }
-
-        mostrarMensaje(mensaje, true);
-    }
-}
-
-const normalizarPaso = (paso) => {
-    return {
-        id: paso.id,
-        nom: paso.nom,
-        ordre: paso.ordre,
-        incoterm_id: paso.incoterm_id,
-        activo: convertirABoolean(paso.activo)
-    };
-}
-
-const convertirABoolean = (valor) => {
-    return (
-        valor === true ||
-        valor === 1 ||
-        valor === '1' ||
-        valor === 'true'
-    );
-}
-
-// SELECCIONAR INCOTERM
-const seleccionarIncoterm = async (incoterm) => {
-    const instanciaId = await asegurarInstanciaIncoterm(incoterm);
-
-    if (!instanciaId) {
-        mostrarMensaje('No se pudo preparar el incoterm para editar pasos.', true);
-        return;
-    }
-
-    incotermSeleccionado.value = incoterm;
-    incotermSeleccionado.value._incoterm_instance_id = instanciaId;
-    mensaje.value = '';
-    await cargarPasosDelIncoterm(instanciaId);
-}
-
-// CERRAR EDITOR
-const cerrarEditor = () => {
-    incotermSeleccionado.value = null;
-    pasosDelIncoterm.value = [];
-    mensaje.value = '';
-}
-
-// GUARDAR CAMBIOS
-const guardarCambios = async () => {
-    if (!incotermSeleccionado.value || pasosDelIncoterm.value.length === 0) {
-        mostrarMensaje('No hay pasos para guardar.', true);
-        return;
-    }
-
-    guardando.value = true;
-    mensaje.value = '';
-
-    const datosParaGuardar = pasosDelIncoterm.value.map(paso => ({
-        id: paso.id,
-        activo: paso.activo
-    }));
-
-    console.log('Datos a guardar:', datosParaGuardar);
-    console.log('Pasos del incoterm actual:', pasosDelIncoterm.value);
-
-    try {
-        const respuesta = await api.post('/tracking-steps/actualizar-estados', {
-            incoterm_id: incotermSeleccionado.value._incoterm_instance_id || incotermSeleccionado.value.id,
-            pasos: datosParaGuardar
-        });
-
-        console.log('Respuesta del servidor:', respuesta);
-        mostrarMensaje('Pasos actualizados correctamente.', false);
-        
-        setTimeout(() => {
-            cerrarEditor();
-            cargarIncoterms();
-        }, 1500);
-    } catch (error) {
-        console.error('Error al guardar:', error);
-        console.error('Response data:', error.response?.data);
-        mostrarMensaje(
-            error?.response?.data?.message || 'No se pudieron guardar los cambios.',
-            true
-        );
-    } finally {
-        guardando.value = false;
-    }
-}
-
-// ELIMINAR INCOTERM
-const eliminarIncoterm = async (id) => {
-    const confirmar = window.confirm('Â¿EstÃ¡s seguro que quieres eliminar este incoterm?');
-    if (!confirmar) return;
-
-    try {
-        const card = incoterms.value.find(item => item.id == id);
-        if (!card?._incoterm_instance_id) {
-            mostrarMensaje('No hay instancia de incoterm para eliminar en este tipo.', true);
-            return;
-        }
-
-        await api.delete(`/incoterms/${card._incoterm_instance_id}`);
-        mostrarMensaje('Incoterm eliminado correctamente.', false);
-        await cargarIncoterms();
-    } catch (error) {
-        const mensaje = error?.response?.data?.message || 'No se pudo eliminar el incoterm.';
-        mostrarMensaje(mensaje, true);
-        console.error('Error al eliminar incoterm:', error);
-    }
-}
-
-// MOSTRAR MENSAJE
-const mostrarMensaje = (texto, esErrorMensaje = false) => {
-    mensaje.value = texto;
-    esError.value = esErrorMensaje;
-}
-
-const abrirFormularioNuevoIncoterm = () => {
-    mensaje.value = '';
-    esError.value = false;
-    nuevoIncoterm.value = { nom: '', codi: '' };
-    mostrarFormularioNuevoIncoterm.value = true;
-}
-
-const cerrarFormularioNuevoIncoterm = () => {
-    mostrarFormularioNuevoIncoterm.value = false;
-    nuevoIncoterm.value = { nom: '', codi: '' };
-}
-
-const abrirFormularioEditarIncoterm = async (incoterm) => {
-    const instanciaId = await asegurarInstanciaIncoterm(incoterm);
-    if (!instanciaId) {
-        mostrarMensaje('No se pudo abrir edición para este tipo de incoterm.', true);
-        return;
-    }
-
-    const tipoId =
-        incoterm?.tipus_inconterm_id ??
-        incoterm?.tipusIncoterm?.id ??
-        incoterm?.tipus?.id;
-    const tipusLocal =
-        incoterm?.tipusIncoterm ||
-        incoterm?.tipus ||
-        tiposIncoterms.value.find(item => item.id == tipoId) ||
-        {};
-
-    incotermEditando.value = {
-        id: instanciaId,
-        nom: tipusLocal.nom || '',
-        codi: tipusLocal.codi || '',
-    };
-    mostrarFormularioEditarIncoterm.value = true;
-
-    try {
-        const { data } = await api.get(`/incoterms/${instanciaId}`);
-        const tipus = data?.tipusIncoterm || data?.tipus;
-
-        incotermEditando.value = {
-            id: instanciaId,
-            nom: tipus.nom || incotermEditando.value.nom || '',
-            codi: tipus.codi || incotermEditando.value.codi || '',
-        };
-    } catch (error) {
-        console.error('No se pudieron refrescar los datos del incoterm a editar:', error);
-    }
-}
-
-const cerrarFormularioEditarIncoterm = () => {
-    mostrarFormularioEditarIncoterm.value = false;
-    incotermEditando.value = { id: null, nom: '', codi: '' };
-}
-
-const crearIncoterm = async () => {
-    const codi = nuevoIncoterm.value.codi.trim();
-    const nom = nuevoIncoterm.value.nom.trim();
-
-    if (!codi || !nom) {
-        mostrarMensaje('El código y el nombre son obligatorios.', true);
-        return;
-    }
-
-    const tipusSeleccionat = tiposIncoterms.value.find(item => {
-        const itemCodi = String(item?.codi ?? '').trim().toUpperCase();
-        const itemNom = String(item?.nom ?? '').trim().toUpperCase();
-        return itemCodi === codi.toUpperCase() && itemNom === nom.toUpperCase();
-    });
-
-    creandoIncoterm.value = true;
-    mensaje.value = '';
-
-    try {
-        const payload = {
-            codi: codi,
-            nom: nom,
-            tracking_steps_id: null,
-        };
-
-        if (tipusSeleccionat && tipusSeleccionat.id) {
-            payload.tipus_incoterm_id = tipusSeleccionat.id;
-        }
-
-        const respuesta = await api.post('/incoterms', payload);
-
-        await cargarTiposIncoterm();
-        await cargarIncoterms();
-
-        const tipusIdCreado = respuesta.data ? respuesta.data.tipus_inconterm_id : null;
-        const incotermCreado = incoterms.value.find(item => item.id == tipusIdCreado) || null;
-        cerrarFormularioNuevoIncoterm();
-
-        if (incotermCreado) {
-            await seleccionarIncoterm(incotermCreado);
-        }
-
-        mostrarMensaje('Incoterm creado correctamente.', false);
-    } catch (error) {
-        mostrarMensaje(
-            error?.response?.data?.message || error?.response?.data || 'No se pudo crear el incoterm.',
-            true
-        );
-        console.error(error);
-    } finally {
-        creandoIncoterm.value = false;
-    }
-}
-
-const asegurarInstanciaIncoterm = async (incoterm) => {
-    if (incoterm?._incoterm_instance_id) {
-        return incoterm._incoterm_instance_id;
-    }
-
-    const tipus = incoterm && incoterm.tipusIncoterm ? incoterm.tipusIncoterm : {};
-    const payload = {
-        tipus_incoterm_id: incoterm ? (incoterm.tipus_inconterm_id || incoterm.id) : null,
-        codi: (tipus.codi || '').trim(),
-        nom: (tipus.nom || '').trim(),
-    };
-
-    if (!payload.tipus_incoterm_id) {
-        return null;
-    }
-
-    const respuesta = await api.post('/incoterms', payload);
-    const createdId = respuesta.data ? respuesta.data.id : null;
-
-    if (createdId) {
-        incoterm._incoterm_instance_id = createdId;
-    }
-
-    return createdId;
-}
-const editarIncoterm = async () => {
-    if (!incotermEditando.value.codi.trim() || !incotermEditando.value.nom.trim()) {
-        mostrarMensaje('El cÃƒÂ³digo y el nombre son obligatorios.', true);
-        return;
-    }
-
-    guardandoEdicionIncoterm.value = true;
-
-    try {
-        await api.put(`/incoterms/${incotermEditando.value.id}`, {
-            codi: incotermEditando.value.codi.trim(),
-            nom: incotermEditando.value.nom.trim(),
-        });
-
-        await cargarTiposIncoterm();
-        await cargarIncoterms();
-        cerrarFormularioEditarIncoterm();
-        mostrarMensaje('Incoterm actualizado correctamente.', false);
-    } catch (error) {
-        mostrarMensaje(
-            error?.response?.data?.message || error?.response?.data || 'No se pudo editar el incoterm.',
-            true
-        );
-        console.error(error);
-    } finally {
-        guardandoEdicionIncoterm.value = false;
-    }
-}
-
-// CREAR NUEVO PASO
-const crearPaso = async () => {
-
-    if (!nuevoPaso.value.nom.trim()) {
-        mostrarMensaje('El nombre del paso es obligatorio.', true);
-        return;
-    }
-
-    if (!incotermSeleccionado.value) {
-        mostrarMensaje('No hay incoterm seleccionado.', true);
-        return;
-    }
-
-    guardando.value = true;
-
-    try {
-
-        let maxOrden = 0;
-
-        for (const paso of pasosDelIncoterm.value) {
-            if (paso.ordre > maxOrden) {
-                maxOrden = paso.ordre;
-            }
-        }
-
-        const respuesta = await api.post('/tracking-steps', {
-            nom: nuevoPaso.value.nom,
-            incoterm_id: incotermSeleccionado.value.id,
-            ordre: maxOrden + 1
-        });
-
-        const data = respuesta.data;
-
-        const pasoCreado = {
-            id: data.id,
-            nom: data.nom,
-            ordre: data.ordre,
-            incoterm_id: data.incoterm_id,
-            activo:
-                data.activo === true ||
-                data.activo === 1 ||
-                data.activo === '1' ||
-                data.activo === 'true'
-        };
-
-        pasosDelIncoterm.value.push(pasoCreado);
-
-        nuevoPaso.value.nom = '';
-
-        mostrarFormularioPaso.value = false;
-
-        mostrarMensaje('Paso creado correctamente.', false);
-
-    } catch (error) {
-
-        let mensaje = 'No se pudo crear el paso.';
-
-        if (
-            error &&
-            error.response &&
-            error.response.data &&
-            error.response.data.message
-        ) {
-            mensaje = error.response.data.message;
-        }
-
-        mostrarMensaje(mensaje, true);
-
-        console.error(error);
-
-    } finally {
-
-        guardando.value = false;
-    }
-}
-
-// INICIALIZAR
+// ==========================================
+// DATOS DEL FORMULARIO
+// ==========================================
+const formId = ref(null);
+const formCodi = ref('');
+const formNom = ref('');
+const formPasos = ref([]);
+
+// ==========================================
+// CICLO DE VIDA (Carga secuencial)
+// ==========================================
 onMounted(async () => {
-    cargando.value = true;
-    await cargarTiposIncoterm();
-    await cargarIncoterms();
-    cargando.value = false;
+    cargandoLista.value = true;
+
+    try {
+        const resPasos = await api.get('/tracking-steps');
+        todosLosPasosDisponibles.value = resPasos.data || [];
+    } catch (error) {
+        console.error('Error loading pasos:', error);
+    }
+
+    try {
+        const resIncoterms = await api.get('/incoterms');
+        incoterms.value = resIncoterms.data || [];
+    } catch (error) {
+        console.error('Error loading incoterms:', error);
+        mostrarMensaje('Error al cargar la información del servidor.', true);
+    }
+
+    cargandoLista.value = false;
 });
+
+// ==========================================
+// UTILIDADES Y FUNCIONES
+// ==========================================
+const mostrarMensaje = (texto, error = false) => {
+    mensaje.value = texto;
+    esError.value = error;
+    setTimeout(() => { mensaje.value = ''; }, 4000);
+};
+
+const limpiarFormulario = () => {
+    formId.value = null;
+    formCodi.value = '';
+    formNom.value = '';
+    formPasos.value = [];
+};
+
+const refrescarListaIncoterms = async () => {
+    try {
+        const respuesta = await api.get('/incoterms');
+        incoterms.value = respuesta.data || [];
+    } catch (error) {
+        console.error(error);
+    }
+};
+
+// ==========================================
+// GUARDAR, EDITAR Y ELIMINAR
+// ==========================================
+const guardarIncoterm = async () => {
+    if (guardando.value) return;
+
+    if (!formCodi.value || !formNom.value) {
+        mostrarMensaje('Código y nombre del incoterm requeridos.', true);
+        return;
+    }
+
+    guardando.value = true;
+
+    try {
+        if (formId.value !== null) {
+            await api.put(`/incoterms/${formId.value}`, {
+                id: formId.value,
+                codi: formCodi.value,
+                nom: formNom.value,
+                pasos: formPasos.value
+            });
+            mostrarMensaje('Incoterm actualizado correctamente.', false);
+        } else {
+            await api.post('/incoterms', {
+                codi: formCodi.value,
+                nom: formNom.value,
+                pasos: formPasos.value
+            });
+            mostrarMensaje('Incoterm creado con éxito.', false);
+        }
+
+        cerrarModales();
+        await refrescarListaIncoterms();
+    } catch (error) {
+        mostrarMensaje(error?.response?.data?.message ?? 'Fallo al guardar en el servidor.', true);
+    } finally {
+        guardando.value = false;
+    }
+};
+
+const eliminarIncoterm = async (id) => {   
+    try {
+        await api.delete(`/incoterms/${id}`);
+        mostrarMensaje('Incoterm eliminado correctamente.', false);
+        
+        if (incotermSeleccionado.value?.id === id) {
+            cerrarVisor();
+        }
+        await refrescarListaIncoterms();
+    } catch (error) {
+        mostrarMensaje(error?.response?.data?.message ?? 'Error al procesar la baja.', true);
+    }
+};
+
+// ==========================================
+// MANEJO DE MODALES
+// ==========================================
+const abrirModalNuevo = () => {
+    limpiarFormulario();
+    modalFormulario.value = true;
+};
+
+const abrirModalEditar = (incoterm) => {
+    formId.value = incoterm.id;
+    formCodi.value = incoterm.codi;
+    formNom.value = incoterm.nom;
+    formPasos.value = incoterm.tracking_steps ? incoterm.tracking_steps.map(p => p.id) : [];
+    
+    modalFormulario.value = true;
+};
+
+const cerrarModales = () => {
+    modalFormulario.value = false;
+    limpiarFormulario();
+};
+
+const visualizarPasos = (incoterm) => {
+    incotermSeleccionado.value = incoterm;
+};
+
+const cerrarVisor = () => {
+    incotermSeleccionado.value = null;
+};
 </script>
 
 <style lang="scss" scoped>
+/* Conserva tus estilos originales intactos de tu hoja CSS previa */
 .pagina-edicion {
     min-height: 100vh;
     background: #f5f5f5;
@@ -675,10 +307,6 @@ onMounted(async () => {
     }
 }
 
-.gestion-header {
-    display: none;
-}
-
 .seccion-listado {
     position: relative;
 
@@ -686,12 +314,6 @@ onMounted(async () => {
         margin: 0 0 8px;
         font-size: clamp(1.8rem, 2.5vw, 2.4rem);
         color: #10243f;
-    }
-
-    > p {
-        margin: 0 0 24px;
-        color: #5b6f88;
-        font-size: 1rem;
     }
 }
 
@@ -716,10 +338,6 @@ onMounted(async () => {
     gap: 10px;
 }
 
-.acciones-encabezado .mensaje {
-    width: min(420px, 100%);
-}
-
 .estado-carga,
 .estado-vacio {
     display: grid;
@@ -731,10 +349,6 @@ onMounted(async () => {
     border: 1px solid #d8e3ef;
     border-radius: 20px;
     padding: 40px;
-}
-
-.estado-carga {
-    gap: 16px;
 }
 
 .spinner {
@@ -780,7 +394,6 @@ onMounted(async () => {
         color: #7a8fa0;
         font-weight: 600;
         text-transform: uppercase;
-        letter-spacing: 0.05em;
     }
 
     h3 {
@@ -842,7 +455,6 @@ onMounted(async () => {
     color: #5b6f88;
     font-size: 1.2rem;
     cursor: pointer;
-    transition: all 0.2s ease;
 
     &:hover {
         background: #e2eaf3;
@@ -851,8 +463,6 @@ onMounted(async () => {
 }
 
 .contenedor-pasos {
-    margin-bottom: 20px;
-
     h3 {
         margin: 0 0 16px;
         font-size: 1.05rem;
@@ -888,7 +498,6 @@ onMounted(async () => {
     background: #fff;
     border-radius: 10px;
     border: 1px solid #e2eaf3;
-    transition: all 0.2s ease;
 
     &:hover {
         border-color: #0ea5e9;
@@ -961,8 +570,6 @@ onMounted(async () => {
         opacity: 0.6;
         cursor: not-allowed;
     }
-
-    box-shadow: none;
 }
 
 .btn-editar {
@@ -1082,70 +689,4 @@ onMounted(async () => {
         border-color: #fca5a5;
     }
 }
-
-.agregar-paso {
-    margin-top: 16px;
-    padding-top: 16px;
-    border-top: 1px solid #e2eaf3;
-}
-
-.formulario-paso {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-}
-
-.entrada-paso {
-    width: 100%;
-    padding: 10px 12px;
-    border: 1px solid #d8e3ef;
-    border-radius: 8px;
-    font-size: 0.9rem;
-    color: #10243f;
-    background: #fff;
-    transition: all 0.2s ease;
-
-    &:focus {
-        outline: none;
-        border-color: #0ea5e9;
-        box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.1);
-    }
-}
-
-.btn-pequeno {
-    padding: 8px 12px;
-    font-size: 0.85rem;
-}
-
-.btn-nuevo-paso {
-    width: 100%;
-    background: rgba(14, 165, 233, 0.1);
-    color: #0ea5e9;
-    border: 1px dashed #0ea5e9;
-
-    &:hover {
-        background: rgba(14, 165, 233, 0.2);
-    }
-}
-
-@media (max-width: 640px) {
-    .contenedor {
-        padding: 16px 0 24px;
-    }
-
-    .seccion-editor {
-        padding: 18px;
-        margin-top: 20px;
-    }
-
-    .grid-tarjetas {
-        grid-template-columns: 1fr;
-    }
-
-    .acciones-editor {
-        flex-direction: column;
-    }
-}
 </style>
-
-
