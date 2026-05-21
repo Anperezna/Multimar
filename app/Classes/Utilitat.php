@@ -84,6 +84,8 @@ class Utilitat
                 case 1503:
                     $missatge = '1503 - No se encontró el tipo de incoterm para actualizar pasos.';
                     break;
+                case 1504:
+                    $missatge = '1504 - Incoterm no encontrado.';
                 case 1049:
                     $missatge = '1049 - Base de dades desconeguda';
                     break;

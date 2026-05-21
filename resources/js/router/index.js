@@ -56,7 +56,7 @@ const routes = [
     {
         path: '/incoterms/:id',
         name: 'incoterm-detalle',
-        component: () => import('@/pages/IncotermDetalle.vue')
+        component: () => import('@/components/IncotermDetalle.vue')
     },
     {
         path: '/solicitudOferta',

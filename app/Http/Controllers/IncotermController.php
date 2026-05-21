@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Classes\Utilitat;
 use App\Models\TipusIncoterm;
 use App\Models\TrackingStep;
 use Illuminate\Http\Request;
@@ -14,12 +15,16 @@ class IncotermController extends Controller
      */
     public function index()
     {
-        // Retornamos los TipusIncoterm ordenados por código con su relación cargada
-        return response()->json(
-            TipusIncoterm::with('trackingSteps')
-                        ->orderBy('codi')
-                        ->get()
-        );
+        try {
+            return response()->json(
+                TipusIncoterm::with('trackingSteps')
+                            ->orderBy('codi')
+                            ->get()
+            );
+        } catch (\Exception $e) {
+            // Si el servidor de BD se cae, Utilitat lo atrapa
+            return response()->json(['message' => Utilitat::errorMessage($e)], 500);
+        }
     }
 
     /**
@@ -30,27 +35,26 @@ class IncotermController extends Controller
         $request->validate([
             'codi'  => 'required|string|max:50',
             'nom'   => 'required|string|max:255',
-            'pasos' => 'array' // Array de IDs de tracking_steps seleccionados en el formulario
+            'pasos' => 'array' 
         ]);
 
         DB::beginTransaction();
         try {
-            // 1. Crear la entidad catálogo base
             $tipusIncoterm = TipusIncoterm::create([
                 'codi' => $request->input('codi'),
                 'nom'  => $request->input('nom'),
             ]);
 
-            // 2. Asociar los pasos mediante sync() en la tabla pivot
             if ($request->has('pasos')) {
                 $tipusIncoterm->trackingSteps()->sync($request->input('pasos'));
             }
 
             DB::commit();
             return response()->json($tipusIncoterm->load('trackingSteps'), 201);
+
         } catch (\Exception $e) {
             DB::rollBack();
-            return response()->json(['message' => 'Error al crear el incoterm: ' . $e->getMessage()], 500);
+            return response()->json(['message' => Utilitat::errorMessage($e)], 500);
         }
     }
 
@@ -65,28 +69,31 @@ class IncotermController extends Controller
             'pasos' => 'array'
         ]);
 
-        $tipusIncoterm = TipusIncoterm::find($id);
-
-        if (!$tipusIncoterm) {
-            return response()->json(['message' => 'Incoterm no encontrado'], 404);
-        }
-
         DB::beginTransaction();
         try {
-            // 1. Actualizar campos nativos del catálogo
+            $tipusIncoterm = TipusIncoterm::find($id);
+
+            // Validación manual: Lanzamos la excepción con tu código personalizado 1504
+            if (!$tipusIncoterm) {
+                throw new \Exception('Incoterm no encontrado', 1504);
+            }
+
             $tipusIncoterm->update([
                 'codi' => $request->input('codi'),
                 'nom'  => $request->input('nom'),
             ]);
 
-            // 2. Sincronizar la tabla pivot de manera exacta
             $tipusIncoterm->trackingSteps()->sync($request->input('pasos', []));
 
             DB::commit();
             return response()->json($tipusIncoterm->load('trackingSteps'));
+
         } catch (\Exception $e) {
             DB::rollBack();
-            return response()->json(['message' => 'Error al actualizar: ' . $e->getMessage()], 500);
+            
+            // Si el código es 1500 devolvemos error 404, para el resto 500
+            $status = ($e->getCode() == 1504) ? 404 : 500;
+            return response()->json(['message' => Utilitat::errorMessage($e)], $status);
         }
     }
 
@@ -95,25 +102,33 @@ class IncotermController extends Controller
      */
     public function destroy($id)
     {
-        $tipusIncoterm = TipusIncoterm::find($id);
-
-        if (!$tipusIncoterm) {
-            return response()->json(['message' => 'Incoterm no encontrado'], 404);
-        }
-
         DB::beginTransaction();
         try {
-            // 1. Limpiar primero las relaciones en la tabla pivot incoterms
-            $tipusIncoterm->trackingSteps()->detach();
+            $tipusIncoterm = TipusIncoterm::find($id);
 
-            // 2. Eliminar el registro padre
+            // Validación manual: Lanzamos la excepción con tu código personalizado 1504
+            if (!$tipusIncoterm) {
+                throw new \Exception('', 1504);
+            }
+
+            $tipusIncoterm->trackingSteps()->detach();
             $tipusIncoterm->delete();
 
             DB::commit();
             return response()->json(['message' => 'Incoterm eliminado correctamente'], 200);
+
         } catch (\Exception $e) {
             DB::rollBack();
-            return response()->json(['message' => 'Error al eliminar: ' . $e->getMessage()], 500);
+            
+            // Ajustamos el status HTTP según el tipo de error
+            $status = 500;
+            if ($e->getCode() == 1504) {
+                $status = 404; // No encontrado
+            } elseif (isset($e->errorInfo[1]) && $e->errorInfo[1] == 547) {
+                $status = 409; // Conflicto (El famoso error de llaves foráneas de SQL Server)
+            }
+
+            return response()->json(['message' => Utilitat::errorMessage($e)], $status);
         }
     }
 
@@ -122,8 +137,12 @@ class IncotermController extends Controller
      */
     public function getAvailableSteps()
     {
-        return response()->json(
-            TrackingStep::orderBy('ordre')->orderBy('id')->get()
-        );
+        try {
+            return response()->json(
+                TrackingStep::orderBy('ordre')->orderBy('id')->get()
+            );
+        } catch (\Exception $e) {
+            return response()->json(['message' => Utilitat::errorMessage($e)], 500);
+        }
     }
 }

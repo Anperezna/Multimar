@@ -178,7 +178,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import VueQr from 'vue-qr';
 import Input from '@/components/Input.vue';
 import Navbar from '@/components/Navbar.vue';
 import api from '@/lib/api';

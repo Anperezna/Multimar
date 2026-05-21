@@ -154,7 +154,7 @@ const formNom = ref('');
 const formPasos = ref([]);
 
 // ==========================================
-// CICLO DE VIDA (Carga secuencial)
+// CICLO DE VIDA 
 // ==========================================
 onMounted(async () => {
     cargandoLista.value = true;
@@ -170,8 +170,9 @@ onMounted(async () => {
         const resIncoterms = await api.get('/incoterms');
         incoterms.value = resIncoterms.data || [];
     } catch (error) {
-        console.error('Error loading incoterms:', error);
-        mostrarMensaje('Error al cargar la información del servidor.', true);
+        // 🔥 Aquí capturamos el error del index() del backend
+        const msg = error.response?.data?.message || 'Error al cargar la información del servidor.';
+        mostrarMensaje(msg, true);
     }
 
     cargandoLista.value = false;
@@ -236,7 +237,9 @@ const guardarIncoterm = async () => {
         cerrarModales();
         await refrescarListaIncoterms();
     } catch (error) {
-        mostrarMensaje(error?.response?.data?.message ?? 'Fallo al guardar en el servidor.', true);
+        // 🔥 Extraemos el mensaje EXACTO que manda tu clase Utilitat
+        const mensajeBackend = error.response?.data?.message || 'Fallo desconocido al guardar en el servidor.';
+        mostrarMensaje(mensajeBackend, true);
     } finally {
         guardando.value = false;
     }
@@ -254,7 +257,9 @@ const eliminarIncoterm = async (id) => {
         }
         await refrescarListaIncoterms();
     } catch (error) {
-        mostrarMensaje(error?.response?.data?.message ?? 'Error al procesar la baja.', true);
+        // 🔥 Extraemos el mensaje EXACTO que manda tu clase Utilitat
+        const mensajeBackend = error.response?.data?.message || 'Error desconocido al procesar la baja.';
+        mostrarMensaje(mensajeBackend, true);
     }
 };
 
