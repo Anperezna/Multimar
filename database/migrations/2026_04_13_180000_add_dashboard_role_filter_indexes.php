@@ -8,15 +8,15 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::table('solicitud', function (Blueprint $table) {
-            $table->index('client_id', 'solicitud_client_id_index');
-            $table->index('operador_id', 'solicitud_operador_id_index');
-        });
+        // Schema::table('solicitud', function (Blueprint $table) {
+        //     $table->index('client_id', 'solicitud_client_id_index');
+        //     $table->index('operador_id', 'solicitud_operador_id_index');
+        // });
 
-        Schema::table('ofertes', function (Blueprint $table) {
-            $table->index('operador_id', 'ofertes_operador_id_index');
-            $table->index('solicitud_id', 'ofertes_solicitud_id_index');
-        });
+        // Schema::table('ofertes', function (Blueprint $table) {
+        //     $table->index('operador_id', 'ofertes_operador_id_index');
+        //     $table->index('solicitud_id', 'ofertes_solicitud_id_index');
+        // });
     }
 
     public function down(): void
