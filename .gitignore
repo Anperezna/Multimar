@@ -25,3 +25,33 @@ yarn-error.log
 /.nova
 /.vscode
 /.zed
+
+# Base de datos y volúmenes
+/volumes/
+/datos/
+
+# Logs de Laravel y sistema
+/storage/logs/*.log
+/storage/framework/cache/*
+/storage/framework/sessions/*
+/storage/framework/views/*
+
+# Entorno y dependencias
+.env
+/node_modules/
+/vendor/
+
+# Archivos de sistema y basura
+.DS_Store
+Thumbs.db
+
+
+# Ignorar datos locales de los contenedores
+postgres-data/
+n8n_data/
+ollama_data/
+superset_home/
+spark-warehouse/
+
+# Ignorar archivos de entorno con credenciales
+.env

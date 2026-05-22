@@ -117,7 +117,7 @@ async function eliminar(notifId) {
 
 onMounted(() => {
     cargar();
-    setInterval(cargar, 30000);
+    setInterval(cargar, 60000);
 });
 </script>
 

@@ -33,6 +33,11 @@
                 <img :src="chatbotIcon" alt="icons" class="navbar__icon">
                 Chatbot
             </router-link>
+
+            <router-link to="/dashboards" class="navbar__item" active-class="active">
+                <img :src="dashboardIcon" alt="icons" class="navbar__icon">
+                Dashboards BI
+            </router-link>
         </div>
         <div class="navbar__right">
             <NotificationsPopup />

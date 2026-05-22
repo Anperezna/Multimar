@@ -12,16 +12,31 @@ use App\Http\Controllers\TipusFluxeController;
 use App\Http\Controllers\TipusIncotermController;
 use App\Http\Controllers\NotificacionController;
 use App\Http\Controllers\ChatbotController;
+use App\Http\Controllers\SupersetDashboardController;
 use App\Http\Controllers\TrackingStepController;
 use Illuminate\Support\Facades\Route;
 
 Route::post('/login', [AuthentificationController::class, 'login']);
 
+Route::post('/chatbot/message', [ChatbotController::class, 'message']);
 
 
 Route::middleware(['auth:sanctum'])->group(function () {
 
 Route::get('/tracking-steps', [TrackingStepController::class, 'index']);
+
+// Incoterms CRUD (métodos REST estándar)
+Route::post('/incoterms', [IncotermController::class, 'store']);
+Route::get('/incoterms/{incoterm}', [IncotermController::class, 'show']);
+Route::put('/incoterms/{incoterm}', [IncotermController::class, 'update']);
+Route::delete('/incoterms/{incoterm}', [IncotermController::class, 'destroy']);
+
+// Permitir crear pasos de tracking desde la UI
+Route::post('/tracking-steps', [TrackingStepController::class, 'store']);
+Route::put('/tracking-steps/{trackingStep}', [TrackingStepController::class, 'update']);
+Route::delete('/tracking-steps/{trackingStep}', [TrackingStepController::class, 'destroy']);
+Route::post('/tracking-steps/actualizar-estados', [TrackingStepController::class, 'actualizarEstados']);
+Route::put('/incoterms/{incoterm}/principal-step', [TrackingStepController::class, 'assignPrincipalStep']);
 
 Route::get('/user', [UsuariController::class, 'me']);
 Route::post('/user', [UsuariController::class, 'updateProfile']);
@@ -61,7 +76,7 @@ Route::get('/notificaciones', [NotificacionController::class, 'getMyNotification
 Route::patch('/notificaciones/{id}/read', [NotificacionController::class, 'markAsRead']);
 Route::delete('/notificaciones/{id}', [NotificacionController::class, 'deleteNotification']);
 Route::get('/notificaciones/unread-count', [NotificacionController::class, 'getUnreadCount']);
-Route::post('/chatbot/message', [ChatbotController::class, 'message']);
+Route::get('/superset/dashboards', [SupersetDashboardController::class, 'index']);
 
 Route::post('/usuaris', [UsuariController::class, 'store']);
 Route::delete('/usuaris/{usuari}', [UsuariController::class, 'destroy']);

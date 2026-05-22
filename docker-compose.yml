@@ -1,3 +1,5 @@
+version: '3.8'
+
 services:
   app:
     build:
@@ -7,5 +9,125 @@ services:
       - .env
     environment:
       RUN_MIGRATIONS: "true"
-    expose:
-      - "80"
+    ports:
+      - "${APP_PORT:-3000}:80"
+    networks:
+      - dokploy-network
+
+  # Base de datos unificada
+  postgres-metastore:
+    image: postgres:13
+    environment:
+      POSTGRES_USER: hive
+      POSTGRES_PASSWORD: hive
+      POSTGRES_DB: metastore
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - ./postgres-data:/var/lib/postgresql/data
+      - ./datos:/datos
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U hive"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - dokploy-network
+
+  metastore:
+    image: apache/hive:4.0.0
+    depends_on:
+      postgres-metastore:
+        condition: service_healthy
+    environment:
+      SERVICE_NAME: metastore
+      DB_DRIVER: postgres
+      SKIP_SCHEMA_INIT: "true"
+      SERVICE_OPTS: "-Djavax.jdo.option.ConnectionDriverName=org.postgresql.Driver -Djavax.jdo.option.ConnectionURL=jdbc:postgresql://postgres-metastore:5432/metastore -Djavax.jdo.option.ConnectionUserName=hive -Djavax.jdo.option.ConnectionPassword=hive"
+    volumes:
+      - ./drivers/postgresql.jar:/opt/hive/lib/postgresql.jar
+    command: sh -c "/opt/hive/bin/schematool -dbType postgres -initOrUpgradeSchema && /opt/hive/bin/hive --service metastore"
+    networks:
+      - dokploy-network
+
+  spark:
+    image: apache/spark:3.5.1
+    user: root
+    environment:
+      - SPARK_MODE=master
+    volumes:
+      - ./datos:/opt/spark/datos
+      - ./spark-warehouse:/opt/spark/spark-warehouse
+      - ./hive-site.xml:/opt/spark/conf/hive-site.xml
+      - ./init_tables.py:/opt/spark/init_tables.py
+    depends_on:
+      - metastore
+    command: /bin/bash -c "sleep 30 && /opt/spark/sbin/start-thriftserver.sh --master local[*] --hiveconf hive.server2.thrift.port=10000 --hiveconf hive.server2.thrift.bind.host=0.0.0.0 && sleep 10 && /opt/spark/bin/spark-submit /opt/spark/init_tables.py && tail -f /opt/spark/logs/*.out"
+    networks:
+      - dokploy-network
+
+  superset:
+    build:
+      context: .
+      dockerfile: Dockerfile.superset
+    environment:
+      - SUPERSET_SECRET_KEY=clase_datos_2024
+    depends_on:
+      - spark
+    volumes:
+      - ./superset_home:/app/superset_home
+    command: /bin/bash -c "mkdir -p /app/superset_home && superset db upgrade && superset fab create-admin --username admin --firstname admin --lastname admin --email admin@admin.com --password admin || true && superset init && /usr/bin/run-server.sh --host 0.0.0.0 --port 8088"
+    networks:
+      - dokploy-network
+
+  ollama:
+    image: ollama/ollama:latest
+    volumes:
+      - ./ollama_data:/root/.ollama
+    restart: unless-stopped
+    networks:
+      - dokploy-network
+
+  ollama-init:
+    image: ollama/ollama:latest
+    depends_on:
+      - ollama
+    restart: "no"
+    entrypoint: /bin/bash
+    command: -c "sleep 10 && ollama pull qwen2.5-coder:1.5b && ollama pull llama3.2:latest"
+    environment:
+      - OLLAMA_HOST=ollama:11434
+    networks:
+      - dokploy-network
+
+  n8n:
+    image: n8nio/n8n:latest
+    ports:
+      - "5679:5678"
+    user: root
+    environment:
+      - N8N_BASIC_AUTH_ACTIVE=false
+      - N8N_SECURE_COOKIE=false
+      - OLLAMA_BASE_URL=http://ollama:11434
+      - N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS=false
+      - N8N_DEFAULT_BINARY_DATA_MODE=filesystem
+      - NODE_OPTIONS=--max-old-space-size=4096
+      # 👇 VARIABLES PARA CARGAR EL FLOW AUTOMÁTICAMENTE
+      - N8N_BOOTSTRAP_WORKFLOW=/root/.n8n-files/chatbotminimal.json
+      - DB_HOST=postgres-metastore
+      - DB_NAME=metastore
+      - DB_USER=hive
+      - DB_PASSWORD=hive
+    depends_on:
+      - ollama
+      - postgres-metastore
+    volumes:
+      # 👇 CORREGIDO: Ahora apunta a /root/.n8n para que se guarden tus cambios de verdad
+      - ./n8n_data:/root/.n8n
+      - ./datos:/root/.n8n-files
+    restart: unless-stopped
+    networks:
+      - dokploy-network
+
+networks:
+  dokploy-network:
+    external: true

@@ -15,8 +15,9 @@ class Incoterm extends Model
 
     public $incrementing = true;
 
+    protected $keyType = 'int';
+
     protected $fillable = [
-        'id',
         'tipus_inconterm_id',
         'tracking_steps_id',
     ];
@@ -29,6 +30,11 @@ class Incoterm extends Model
     public function trackingStep()
     {
         return $this->belongsTo(TrackingStep::class, 'tracking_steps_id');
+    }
+
+    public function trackingSteps()
+    {
+        return $this->hasMany(TrackingStep::class, 'incoterm_id');
     }
 
     public function solicituds()

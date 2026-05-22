@@ -23,6 +23,7 @@ services:
       - spark
     volumes:
       - ./superset_home:/app/superset_home
+      - ./superset_config.py:/app/pythonpath/superset_config.py
     command: >
       /bin/bash -c "mkdir -p /app/superset_home && superset db upgrade && superset fab create-admin --username admin --firstname admin --lastname admin --email admin@admin.com --password admin && superset init && /usr/bin/run-server.sh --host 0.0.0.0 --port 8088"
 
