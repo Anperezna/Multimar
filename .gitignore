@@ -25,3 +25,15 @@ yarn-error.log
 /.nova
 /.vscode
 /.zed
+postgres-data/
+n8n_data/
+ollama_data/
+superset_home/
+spark-warehouse/
+volumes/
+.env
+
+# Ignorar archivos de datos gigantes
+datos/*.csv
+# Ignorar archivos de datos gigantes
+datos/*.csv
