@@ -1,0 +1,271 @@
+{
+  "name": "Chatbot Minimalista Multimar",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "d40fb515-badf-47aa-86db-3b91158622ad",
+      "name": "Inyectar Manualmente",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "fileSelector": "/root/.n8n-files/n8n_input.csv",
+        "options": {}
+      },
+      "id": "2f1284c1-f1da-4168-843f-83cce2a07d66",
+      "name": "Leer Archivo CSV",
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1.1,
+      "position": [
+        224,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "257a4319-9da3-4ce8-bddd-904e2d08cf28",
+      "name": "Extraer Datos",
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1.1,
+      "position": [
+        448,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public"
+        },
+        "table": {
+          "__rl": true,
+          "value": "commodity_trade",
+          "mode": "list"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {}
+        },
+        "options": {}
+      },
+      "id": "497cff76-1a9d-490d-8c70-16f263938eab",
+      "name": "Insertar en BD",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        672,
+        0
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "4lnhNFjXzaRqf9GH",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "chat-db",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "3699775c-3a4d-4668-9403-3f8c6336eb0e",
+      "name": "Webhook chat-db",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        384,
+        384
+      ],
+      "webhookId": "498ed2d6-ffde-4468-9b61-1f70544f9e2b"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.body?.message || $json.body?.text || 'Hola' }}",
+        "options": {
+          "systemMessage": "Eres un experto asistente de análisis de datos para el proyecto Multimar. Tienes acceso directo a una base de datos PostgreSQL mediante una herramienta. \n\nREGLAS:\n1. Cuando el usuario pregunte por datos, USA SIEMPRE la herramienta de Postgres para buscar la información.\n2. La tabla se llama 'commodity_trade'.\n3. Responde de forma clara, natural y concisa en español basándote EXCLUSIVAMENTE en los datos que te devuelva la consulta.\n4. Si la consulta no devuelve datos, dile al usuario amablemente que no hay registros para esa búsqueda."
+        }
+      },
+      "id": "9481f9bf-0536-43ef-af7f-1e2bccc3929e",
+      "name": "Agente de Datos",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        672,
+        384
+      ]
+    },
+    {
+      "parameters": {
+        "model": "llama3.2:latest",
+        "options": {}
+      },
+      "id": "28ed7695-893d-4918-a45f-3ae0822660b1",
+      "name": "Ollama llama3.2",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOllama",
+      "typeVersion": 1,
+      "position": [
+        592,
+        624
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "options": {}
+      },
+      "id": "b8d7ba4e-f5d0-4091-81f9-502c05f02743",
+      "name": "Postgres Data Tool",
+      "type": "n8n-nodes-base.postgresTool",
+      "typeVersion": 2.6,
+      "position": [
+        784,
+        624
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "4lnhNFjXzaRqf9GH",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"message\": \"={{ $json.output }}\"\n}",
+        "options": {}
+      },
+      "id": "85d19be4-3efa-4662-b900-7c4d948389d5",
+      "name": "Responder a Web",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        1056,
+        384
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "CREATE TABLE public.commodity_trade (\n    id SERIAL PRIMARY KEY,\n    country_or_area VARCHAR(255),\n    year INTEGER,\n    comm_code VARCHAR(50),\n    commodity VARCHAR(500),\n    flow VARCHAR(50),\n    trade_usd BIGINT,\n    weight_kg BIGINT,\n    quantity_name VARCHAR(100),\n    quantity BIGINT,\n    category VARCHAR(255),\n    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP\n);",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        1056,
+        592
+      ],
+      "id": "82600087-849b-42dc-8421-483188f3f363",
+      "name": "Execute a SQL query",
+      "credentials": {
+        "postgres": {
+          "id": "4lnhNFjXzaRqf9GH",
+          "name": "Postgres account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Inyectar Manualmente": {
+      "main": [
+        [
+          {
+            "node": "Leer Archivo CSV",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Leer Archivo CSV": {
+      "main": [
+        [
+          {
+            "node": "Extraer Datos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extraer Datos": {
+      "main": [
+        [
+          {
+            "node": "Insertar en BD",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook chat-db": {
+      "main": [
+        [
+          {
+            "node": "Agente de Datos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Agente de Datos": {
+      "main": [
+        [
+          {
+            "node": "Responder a Web",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ollama llama3.2": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Agente de Datos",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Postgres Data Tool": {
+      "ai_tool": [
+        [
+          {
+            "node": "Agente de Datos",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "a73d05cb-e095-4985-accb-bef25c04d9ff",
+  "meta": {
+    "instanceId": "2d611a84d261f72a78bb4364664df0df05775ae64e9cb509a0b33e6f0a80a71e"
+  },
+  "id": "1x48nA4JeThPuDmC",
+  "tags": []
+}
