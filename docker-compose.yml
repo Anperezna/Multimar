@@ -1,20 +1,11 @@
 services:
-  # Backend + Frontend (monolith): Laravel PHP-FPM + Nginx + Supervisor
   app:
     build:
       context: .
       dockerfile: Dockerfile
-    # .env se inyecta en runtime porque esta excluido del contexto de build.
     env_file:
       - .env
     environment:
-      # Activa migraciones al arrancar el contenedor app.
       RUN_MIGRATIONS: "true"
-    ports:
-      # Puerto publico: host 3000 -> contenedor 80 (compatible desarrollo local y Dokploy).
-      - "${APP_PORT:-3000}:80"
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.multimar-app.rule=Host(`multimar-app-e330yi-6c471d-51-83-192-177.traefik.me`)"
-      - "traefik.http.routers.multimar-app.entrypoints=http,https"
-      - "traefik.http.services.multimar-app.loadbalancer.server.port=80"
+    expose:
+      - "80"
