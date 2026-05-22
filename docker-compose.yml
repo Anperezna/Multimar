@@ -101,6 +101,8 @@ services:
 
   n8n:
     image: n8nio/n8n:latest
+    ports:
+      - "5679:5678"
     user: root
     environment:
       - N8N_BASIC_AUTH_ACTIVE=false
@@ -109,11 +111,18 @@ services:
       - N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS=false
       - N8N_DEFAULT_BINARY_DATA_MODE=filesystem
       - NODE_OPTIONS=--max-old-space-size=4096
+      # 👇 VARIABLES PARA CARGAR EL FLOW AUTOMÁTICAMENTE
+      - N8N_BOOTSTRAP_WORKFLOW=/root/.n8n-files/chatbotminimal.json
+      - DB_HOST=postgres-metastore
+      - DB_NAME=metastore
+      - DB_USER=hive
+      - DB_PASSWORD=hive
     depends_on:
       - ollama
       - postgres-metastore
     volumes:
-      - ./n8n_data:/home/node/.n8n
+      # 👇 CORREGIDO: Ahora apunta a /root/.n8n para que se guarden tus cambios de verdad
+      - ./n8n_data:/root/.n8n
       - ./datos:/root/.n8n-files
     restart: unless-stopped
     networks:
