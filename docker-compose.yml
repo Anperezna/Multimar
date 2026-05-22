@@ -1,4 +1,7 @@
+version: '3.8'
+
 services:
+  # 1. Tu aplicación principal (Frontend / Backend)
   app:
     build:
       context: .
@@ -7,5 +10,68 @@ services:
       - .env
     environment:
       RUN_MIGRATIONS: "true"
+      DB_HOST: postgres-metastore
+      DB_NAME: metastore
+      DB_USER: hive
+      DB_PASSWORD: ${PROD_DB_PASSWORD:-hive}
     expose:
       - "80"
+    depends_on:
+      - postgres-metastore
+
+  # 2. La base de datos central de producción
+  postgres-metastore:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: metastore
+      POSTGRES_USER: hive
+      POSTGRES_PASSWORD: ${PROD_DB_PASSWORD:-hive}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    expose:
+      - "5432"
+
+  # 3. Automatizaciones y flujos con n8n
+  n8n:
+    image: n8nio/n8n:latest
+    environment:
+      - DB_TYPE=postgresdb
+      - DB_POSTGRESDB_HOST=postgres-metastore
+      - DB_POSTGRESDB_DATABASE=metastore
+      - DB_POSTGRESDB_USER=hive
+      - DB_POSTGRESDB_PASSWORD=${PROD_DB_PASSWORD:-hive}
+      - N8N_BOOTSTRAP_WORKFLOW=/root/.n8n-files/chatbotminimal.json
+    ports:
+      - "5679:5678"
+    volumes:
+      - n8n_data:/home/node/.n8n
+      - ./datos:/root/.n8n-files
+    depends_on:
+      - postgres-metastore
+
+  # 4. Modelos de Inteligencia Artificial locales
+  ollama:
+    image: ollama/ollama:latest
+    volumes:
+      - ollama_data:/root/.ollama
+    expose:
+      - "11434"
+
+  # 5. Analítica de datos y Business Intelligence
+  superset:
+    image: apache/superset:latest
+    environment:
+      - SUPERSET_SECRET_KEY=${SUPERSET_SECRET_KEY:-tu_clave_secreta_super_segura_aqui}
+    volumes:
+      - superset_home:/app/superset_home
+    ports:
+      - "8088:8088"
+    depends_on:
+      - postgres-metastore
+
+# Volúmenes nombrados para que los datos persistan en el servidor si se reinicia
+volumes:
+  postgres-data:
+  n8n_data:
+  ollama_data:
+  superset_home:
