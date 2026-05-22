@@ -13,16 +13,12 @@
                     </div>
 
                     <h1>Asistente Multimar</h1>
-                    <p>Preguntame sobre procesos logisticos, ofertas y dudas operativas.</p>
+                    <p>Preguntame sobre procesos logísticos, ofertas y dudas operativas.</p>
                 </header>
 
                 <div ref="messagesContainer" class="chatbot-messages">
-                    <article
-                        v-for="(msg, index) in messages"
-                        :key="index"
-                        class="message"
-                        :class="msg.role === 'user' ? 'message--user' : 'message--bot'"
-                    >
+                    <article v-for="(msg, index) in messages" :key="index" class="message"
+                        :class="msg.role === 'user' ? 'message--user' : 'message--bot'">
                         <p>{{ msg.content }}</p>
                     </article>
 
@@ -31,27 +27,25 @@
                     </article>
                 </div>
 
-                <form class="chatbot-form" @submit.prevent="sendMessage">
-                    <Input
-                        v-model="input"
-                        placeholder="Escribe tu mensaje..."
-                        inputClass="chatbot-input"
-                        :disabled="isLoading"
-                    />
-                    <button type="submit" class="chatbot-send" :disabled="isLoading || !input.trim()">
-                        Enviar
-                    </button>
-                </form>
+                <div class="chatbot-form">
+                    <Input v-model="input" placeholder="Escribe tu mensaje..." inputClass="chatbot-input"
+                        :disabled="isLoading" @keydown.enter.prevent="sendMessage"
+                        />
+                        <button type="button" class="chatbot-send" :disabled="isLoading || !input.trim()"
+                            @click.prevent="sendMessage">
+                            {{ isLoading ? 'Enviando...' : 'Enviar' }}
+                        </button>
+                </div>
             </section>
         </main>
     </div>
 </template>
 
 <script setup>
-import { nextTick, onMounted, ref } from 'vue';
-import Navbar from '@/components/Navbar.vue';
+import { nextTick, onMounted, ref, onUnmounted } from 'vue';
 import Input from '@/components/Input.vue';
-import api from '@/lib/api';
+import Navbar from '@/components/Navbar.vue';
+import { chatbotApi } from '@/lib/api';
 import backIcon from '../../../public/icons_multimar/icons-simex/compartidos/light_icons/arrow-left-w.svg';
 
 const input = ref('');
@@ -60,33 +54,45 @@ const messagesContainer = ref(null);
 const sessionStorageKey = 'multimar-chatbot-session-id';
 const sessionId = ref('');
 
+const messages = ref([
+    {
+        role: 'assistant',
+        content: 'Hola. Soy el asistente de Multimar. ¿Qué necesitas resolver hoy?',
+    },
+]);
+
 const createSessionId = () => {
     if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
         return crypto.randomUUID();
     }
-
     return `chat-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 };
 
 onMounted(() => {
-    if (typeof window === 'undefined') {
-        return;
-    }
-
     sessionId.value = window.localStorage.getItem(sessionStorageKey) || createSessionId();
     window.localStorage.setItem(sessionStorageKey, sessionId.value);
+    
+    // 🔥 Prevenir cualquier submit de formulario dentro del chatbot
+    const chatbotShell = document.querySelector('.chatbot-shell');
+    if (chatbotShell) {
+        const forms = chatbotShell.querySelectorAll('form');
+        forms.forEach(form => {
+            form.addEventListener('submit', (e) => {
+                e.preventDefault();
+                console.log('Submit prevenido');
+                return false;
+            });
+        });
+    }
 });
 
-const messages = ref([
-    {
-        role: 'assistant',
-        content: 'Hola. Soy el asistente de Multimar. Que necesitas resolver hoy?',
-    },
-]);
+// 🔥 Limpiar al desmontar (por si acaso)
+onUnmounted(() => {
+    console.log('Chatbot page unmounted');
+});
 
 const scrollToBottom = async () => {
     await nextTick();
-
     if (messagesContainer.value) {
         messagesContainer.value.scrollTop = messagesContainer.value.scrollHeight;
     }
@@ -94,16 +100,19 @@ const scrollToBottom = async () => {
 
 const sendMessage = async () => {
     const text = input.value.trim();
-    const currentSessionId = sessionId.value || createSessionId();
-
-    if (!sessionId.value && typeof window !== 'undefined') {
-        sessionId.value = currentSessionId;
-        window.localStorage.setItem(sessionStorageKey, currentSessionId);
+    if (!text || isLoading.value) return;
+    if (event) {
+        event.preventDefault();
+        event.stopPropagation();
     }
 
-    if (!text || isLoading.value) {
-        return;
-    }
+    if (!text || isLoading.value) return;
+
+    console.log("=== ENVIANDO MENSAJE ===");
+    console.log("=== ENVIANDO MENSAJE ===");
+    console.log("Texto:", text);
+    console.log("Token:", localStorage.getItem('auth_token'));
+    console.log("Session ID:", sessionId.value);
 
     messages.value.push({ role: 'user', content: text });
     input.value = '';
@@ -111,26 +120,59 @@ const sendMessage = async () => {
     await scrollToBottom();
 
     try {
-        const { data } = await api.post('/chatbot/message', {
-            text,
+        console.log("Haciendo petición a /chatbot/message...");
+
+        const response = await chatbotApi.post('/chatbot/message', {
             message: text,
-            sessionId: currentSessionId,
+            sessionId: sessionId.value,
         });
+
+        console.log("Respuesta COMPLETA:", response);
+        console.log("response.data:", response.data);
+        console.log("response.data.reply:", response.data?.reply);
+        console.log("response.status:", response.status);
+
+        // Intentar extraer la respuesta
+        let replyText = 'Respuesta vacía';
+
+        if (response.data) {
+            if (typeof response.data === 'string') {
+                replyText = response.data;
+            } else if (response.data.reply) {
+                replyText = response.data.reply;
+            } else if (response.data.output) {
+                replyText = response.data.output;
+            } else {
+                console.warn("Formato inesperado:", response.data);
+                replyText = JSON.stringify(response.data);
+            }
+        }
+
+        console.log("Reply extraído:", replyText);
 
         messages.value.push({
             role: 'assistant',
-            content: data?.reply || data?.message || data?.output || 'No recibi respuesta del asistente.',
+            content: replyText,
         });
+
     } catch (error) {
-        const serverMessage =
-            error?.response?.data?.message ||
-            error?.response?.data?.reply ||
-            error?.response?.data?.error ||
-            '';
+        console.error("=== ERROR DETALLADO ===");
+        console.error("Error completo:", error);
+
+        if (error.response) {
+            console.error("Status:", error.response.status);
+            console.error("Headers:", error.response.headers);
+            console.error("Data:", error.response.data);
+            console.error("Config:", error.response.config);
+        } else if (error.request) {
+            console.error("No se recibió respuesta:", error.request);
+        } else {
+            console.error("Error config:", error.message);
+        }
 
         messages.value.push({
             role: 'assistant',
-            content: serverMessage || 'Se produjo un error al consultar el chatbot. Intentalo de nuevo.',
+            content: `Error: ${error.message || 'Hubo un problema'}`,
         });
     } finally {
         isLoading.value = false;
@@ -140,12 +182,10 @@ const sendMessage = async () => {
 </script>
 
 <style scoped>
+/* Estilos idénticos a los tuyos */
 .chatbot-page {
     min-height: 100vh;
-    background:
-        radial-gradient(circle at 15% 20%, rgba(27, 42, 74, 0.18), transparent 34%),
-        radial-gradient(circle at 85% 15%, rgba(0, 161, 155, 0.18), transparent 32%),
-        #f3f7fc;
+    background: radial-gradient(circle at 15% 20%, rgba(27, 42, 74, 0.18), transparent 34%), radial-gradient(circle at 85% 15%, rgba(0, 161, 155, 0.18), transparent 32%), #f3f7fc;
 }
 
 .chatbot-main {
@@ -173,10 +213,6 @@ const sendMessage = async () => {
     padding: 22px 24px;
 }
 
-.chatbot-header__top {
-    margin-bottom: 14px;
-}
-
 .chatbot-back {
     display: inline-flex;
     align-items: center;
@@ -184,21 +220,6 @@ const sendMessage = async () => {
     color: #ffffff;
     text-decoration: none;
     font-weight: 700;
-}
-
-.chatbot-back__icon {
-    width: 18px;
-    height: 18px;
-}
-
-.chatbot-header h1 {
-    margin: 0;
-    font-size: 1.4rem;
-}
-
-.chatbot-header p {
-    margin: 6px 0 0;
-    opacity: 0.9;
 }
 
 .chatbot-messages {
@@ -216,11 +237,6 @@ const sendMessage = async () => {
     line-height: 1.45;
 }
 
-.message p {
-    margin: 0;
-    white-space: pre-wrap;
-}
-
 .message--user {
     align-self: flex-end;
     background: #1b2a4a;
@@ -233,10 +249,6 @@ const sendMessage = async () => {
     background: #edf3fa;
     color: #16233e;
     border-bottom-left-radius: 6px;
-}
-
-.message--typing {
-    opacity: 0.75;
 }
 
 .chatbot-form {
@@ -256,11 +268,6 @@ const sendMessage = async () => {
     font: inherit;
 }
 
-.chatbot-input:focus {
-    outline: 2px solid #00a19b;
-    border-color: #00a19b;
-}
-
 .chatbot-send {
     justify-self: end;
     border: none;
@@ -275,20 +282,5 @@ const sendMessage = async () => {
 .chatbot-send:disabled {
     opacity: 0.6;
     cursor: not-allowed;
-}
-
-@media (max-width: 768px) {
-    .chatbot-main {
-        padding: 16px 8px;
-    }
-
-    .chatbot-shell {
-        min-height: 82vh;
-        border-radius: 14px;
-    }
-
-    .message {
-        max-width: 90%;
-    }
 }
 </style>

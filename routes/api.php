@@ -18,6 +18,7 @@ use Illuminate\Support\Facades\Route;
 
 Route::post('/login', [AuthentificationController::class, 'login']);
 
+Route::post('/chatbot/message', [ChatbotController::class, 'message']);
 
 
 Route::middleware(['auth:sanctum'])->group(function () {
@@ -75,7 +76,6 @@ Route::get('/notificaciones', [NotificacionController::class, 'getMyNotification
 Route::patch('/notificaciones/{id}/read', [NotificacionController::class, 'markAsRead']);
 Route::delete('/notificaciones/{id}', [NotificacionController::class, 'deleteNotification']);
 Route::get('/notificaciones/unread-count', [NotificacionController::class, 'getUnreadCount']);
-Route::post('/chatbot/message', [ChatbotController::class, 'message']);
 Route::get('/superset/dashboards', [SupersetDashboardController::class, 'index']);
 
 Route::post('/usuaris', [UsuariController::class, 'store']);
