@@ -76,7 +76,7 @@ class DatabaseSeeder extends Seeder
         $portOrigenId = null;
         $portDestiId = null;
 
-        if (Schema::hasTable('pais')) {
+        if (Schema::hasTable('paissos')) {
             $pais = Pais::firstOrCreate(['nom' => 'Espanya']);
 
             if (Schema::hasTable('ciutats')) {
@@ -86,8 +86,8 @@ class DatabaseSeeder extends Seeder
                 $ciutatDestiId = $ciutatDesti->id;
 
                 if (Schema::hasTable('ports')) {
-                    $portOrigen = Port::firstOrCreate(['nom' => 'Port Barcelona', 'ciutat_id' => $ciutatOrigen->id]);
-                    $portDesti = Port::firstOrCreate(['nom' => 'Port Valencia', 'ciutat_id' => $ciutatDesti->id]);
+                    $portOrigen = Port::firstOrCreate(['nom' => 'Port Barcelona', 'ciutat_id' => $ciutatOrigenId]);
+                    $portDesti = Port::firstOrCreate(['nom' => 'Port Valencia', 'ciutat_id' => $ciutatDestiId]);
                     $portOrigenId = $portOrigen->id;
                     $portDestiId = $portDesti->id;
                 }
@@ -97,11 +97,11 @@ class DatabaseSeeder extends Seeder
         // 4. Líneas y Transportistas
         $liniaId = null;
         $transportistaId = null;
-        if (Schema::hasTable('linia_transport_maritims') && $ciutatOrigenId) {
+        if (Schema::hasTable('linies_transport_maritim') && $ciutatOrigenId) {
             $linia = LiniaTransportMaritim::firstOrCreate(['nom' => 'Linia Mediterrania', 'ciutat_id' => $ciutatOrigenId]);
             $liniaId = $linia->id;
         }
-        if (Schema::hasTable('transportistas') && $ciutatOrigenId) {
+        if (Schema::hasTable('transportistes') && $ciutatOrigenId) {
             $transportista = Transportista::firstOrCreate(['nom' => 'Transmar Demo', 'ciutat_id' => $ciutatOrigenId]);
             $transportistaId = $transportista->id;
         }
@@ -119,19 +119,13 @@ class DatabaseSeeder extends Seeder
             $tipusTransport = TipusTransport::firstOrCreate(['tipus' => 'Maritim']);
             $tipusTransportId = $tipusTransport->id;
         }
-        if (Schema::hasTable('tipus_validacios')) {
+        if (Schema::hasTable('tipus_validacions')) {
             $tipusValidacio = TipusValidacio::firstOrCreate(['tipus' => 'Pendent']);
             $tipusValidacioId = $tipusValidacio->id;
         }
-        if (Schema::hasTable('estat_ofertas')) {
+        if (Schema::hasTable('estats_ofertes')) {
             $estatOferta = EstatOferta::firstOrCreate(['estat' => 'Nova']);
             $estatOfertaId = $estatOferta->id;
-        }
-        if (Schema::hasTable('tipus_incoterms') && Schema::hasTable('tracking_steps') && Schema::hasTable('incoterms')) {
-            $tipusIncoterm = TipusIncoterm::firstOrCreate(['codi' => 'FOB', 'nom' => 'Free On Board']);
-            $trackingStep = TrackingStep::firstOrCreate(['ordre' => 1, 'nom' => 'Sortida']);
-            $incoterm = Incoterm::firstOrCreate(['tipus_inconterm_id' => $tipusIncoterm->id, 'tracking_steps_id' => $trackingStep->id]);
-            $incotermId = $incoterm->id;
         }
         if (Schema::hasTable('tipus_contenidors')) {
             $tipusContenidor = TipusContenidor::firstOrCreate(['tipus' => '20GP']);
@@ -141,9 +135,72 @@ class DatabaseSeeder extends Seeder
             $tipusFluxe = TipusFluxe::firstOrCreate(['tipus' => 'Exportacio']);
             $tipusFluxeId = $tipusFluxe->id;
         }
-        if (Schema::hasTable('tipus_carregas')) {
-            $tipusCarrega = TipusCarrega::firstOrCreate(['tipus' => 'General']);
-            $tipusCarregaId = $tipusCarrega->id;
+
+        // --- NUEVA INYECCIÓN MASIVA DE DATOS ---
+
+        // Tipos de Carga
+        if (Schema::hasTable('tipus_carrega')) {
+            $carregues = [
+                'LCL - Grupatge', 'FCL - Contenidor Complet', 'Càrrega General / Fraccionada',
+                'Càrrega Aèria Standard', 'Càrrega Perillosa (ADR/IMO)', 'Càrrega Refrigerada'
+            ];
+            foreach ($carregues as $carrega) {
+                $tipus = TipusCarrega::firstOrCreate(['tipus' => $carrega]);
+                if ($carrega === 'Càrrega General / Fraccionada') {
+                    $tipusCarregaId = $tipus->id;
+                }
+            }
+        }
+
+        // Tracking Steps & Incoterms (con relaciones)
+        if (Schema::hasTable('tipus_incoterms') && Schema::hasTable('tracking_steps') && Schema::hasTable('incoterms')) {
+            
+            // 1. Crear Tracking Steps
+            $steps = [
+                1 => 'Recollida en origen', 2 => 'Arribada a magatzem de consolidació',
+                3 => 'Despatx de duana d\'exportació', 4 => 'Sortida del port/aeroport d\'origen',
+                5 => 'En trànsit internacional', 6 => 'Arribada al port/aeroport de destí',
+                7 => 'Despatx de duana d\'importació', 8 => 'En repartiment (Last mile)',
+                9 => 'Lliurat al client final'
+            ];
+            foreach ($steps as $ordre => $nom) {
+                TrackingStep::firstOrCreate(['ordre' => $ordre], ['nom' => $nom]);
+            }
+
+            // 2. Crear Tipos de Incoterms
+            $incoterms = [
+                'EXW' => 'Ex Works', 'FCA' => 'Free Carrier', 'CPT' => 'Carriage Paid To',
+                'CIP' => 'Carriage and Insurance Paid To', 'DAP' => 'Delivered at Place',
+                'DPU' => 'Delivered at Place Unloaded', 'DDP' => 'Delivered Duty Paid',
+                'FAS' => 'Free Alongside Ship', 'FOB' => 'Free on Board',
+                'CFR' => 'Cost and Freight', 'CIF' => 'Cost, Insurance and Freight'
+            ];
+            foreach ($incoterms as $codi => $nom) {
+                TipusIncoterm::firstOrCreate(['codi' => $codi], ['nom' => $nom]);
+            }
+
+            // 3. Crear las Relaciones (Incoterm -> Tracking Step)
+            $mappings = [
+                'EXW' => 1, 'FCA' => 2, 'CPT' => 4, 'CIP' => 4, 'DAP' => 8,
+                'DPU' => 9, 'DDP' => 9, 'FAS' => 4, 'FOB' => 4, 'CFR' => 6, 'CIF' => 6
+            ];
+
+            foreach ($mappings as $codi => $stepOrdre) {
+                $tIncoterm = TipusIncoterm::where('codi', $codi)->first();
+                $tStep = TrackingStep::where('ordre', $stepOrdre)->first();
+                
+                if ($tIncoterm && $tStep) {
+                    $relacio = Incoterm::firstOrCreate([
+                        'tipus_inconterm_id' => $tIncoterm->id,
+                        'tracking_steps_id' => $tStep->id
+                    ]);
+                    
+                    // Guardamos el ID del FOB para usarlo luego en la creación de la Solicitud
+                    if ($codi === 'FOB') {
+                        $incotermId = $relacio->id;
+                    }
+                }
+            }
         }
 
         // 6. Clientes, Solicitudes y Ofertas
@@ -155,7 +212,7 @@ class DatabaseSeeder extends Seeder
                 'foto_user' => null,
             ]);
 
-            if (Schema::hasTable('solicituds')) {
+            if (Schema::hasTable('solicitud')) { // Cambiado de 'solicituds' a 'solicitud' según tu modelo
                 $solicitud = Solicitud::where('mercancia_nombre', 'Mercancia demo')
                     ->where('client_id', $client->id)
                     ->where('operador_id', $adminId)
@@ -163,13 +220,13 @@ class DatabaseSeeder extends Seeder
 
                 if (!$solicitud) {
                     $solicitud = Solicitud::create([
-                        'id' => ((int) (Solicitud::max('id') ?? 0)) + 1,
+                        // Borramos la línea del ID manual
                         'mercancia_nombre' => 'Mercancia demo',
                         'pes_brut' => 12000,
                         'volum' => 28.5,
                         'client_id' => $client->id,
                         'operador_id' => $adminId,
-                        'mercancia_tipus' => 1,
+                        'mercancia_tipus' => '1',
                         'tipus_transport_id' => $tipusTransportId,
                         'tipus_contenidor_id' => $tipusContenidorId,
                         'origen_id' => $ciutatOrigenId,
