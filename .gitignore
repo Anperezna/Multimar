@@ -25,3 +25,11 @@ yarn-error.log
 /.nova
 /.vscode
 /.zed
+
+
+/datos
+/n8n_data
+/ollama_data
+/postgres-data
+/superset_home
+/volumes
